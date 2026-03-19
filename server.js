@@ -97,6 +97,13 @@ app.use(`${API}/admin/products`, adminProductRoutes);
 // app.use(`${API}/superadmin`, superAdminRoutes);
 
 // ─── Error Handling ─────────────────────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'InkArt API is running 🚀',
+    environment: process.env.NODE_ENV,
+  });
+});
 app.use(notFound);
 app.use(errorHandler);
 
