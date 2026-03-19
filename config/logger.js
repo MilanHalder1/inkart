@@ -1,13 +1,11 @@
 'use strict';
 
 const winston = require('winston');
-const path = require('path');
 
 const levels = { error: 0, warn: 1, info: 2, http: 3, debug: 4 };
 
-// ✅ Better level control
 const level = () => {
-  if (process.env.VERCEL) return 'info'; // Vercel safe
+  if (process.env.VERCEL) return 'info';
   return process.env.NODE_ENV === 'development' ? 'debug' : 'warn';
 };
 
@@ -21,7 +19,6 @@ const colors = {
 
 winston.addColors(colors);
 
-// ✅ Console format (used everywhere)
 const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
   winston.format.colorize({ all: true }),
@@ -30,21 +27,20 @@ const consoleFormat = winston.format.combine(
   )
 );
 
-// ✅ File format (only local)
-const fileFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.errors({ stack: true }),
-  winston.format.json()
-);
-
-// ✅ Always use console
 const transports = [
   new winston.transports.Console({ format: consoleFormat }),
 ];
 
-// ✅ ONLY enable file logging if NOT on Vercel
+// ✅ ONLY load file logging if NOT on Vercel
 if (!process.env.VERCEL) {
+  const path = require('path');
   const DailyRotateFile = require('winston-daily-rotate-file');
+
+  const fileFormat = winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  );
 
   transports.push(
     new DailyRotateFile({
@@ -52,8 +48,6 @@ if (!process.env.VERCEL) {
       datePattern: 'YYYY-MM-DD',
       level: 'error',
       format: fileFormat,
-      maxFiles: '30d',
-      zippedArchive: true,
     })
   );
 
@@ -62,8 +56,6 @@ if (!process.env.VERCEL) {
       filename: path.join('logs', 'combined-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       format: fileFormat,
-      maxFiles: '14d',
-      zippedArchive: true,
     })
   );
 }
