@@ -3,7 +3,7 @@
 const router = require('express').Router();
 const { protect } = require('../middleware/Auth');
 
-const { getProfile, updateProfile, addAddress, updateAddress, deleteAddress, getOrderHistory } = require('../controllers/profile');
+const { getProfile,getAllUsers, updateProfile, addAddress, updateAddress, deleteAddress, getOrderHistory } = require('../controllers/profile');
 const { createUploader } = require('../config/cloudinary');
 
 const avatarUpload = createUploader('avatars').single('avatar');
@@ -12,6 +12,7 @@ router.use(protect);
 
 router.get('/me', getProfile);
 router.patch('/me', avatarUpload, updateProfile);
+router.get('/all', getAllUsers);
 
 
 router.post('/me/addresses', addAddress);

@@ -32,7 +32,27 @@ const addAddress = catchAsync(async (req, res) => {
   await user.save({ validateBeforeSave: false });
   res.status(201).json({ success: true, data: { addresses: user.addresses } });
 });
+const getAllUsers = catchAsync(async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.min(100, parseInt(req.query.limit, 10) || 20);
+  const filter = { role: 'user' };
+  
+  if (req.query.search) {
+    const re = new RegExp(req.query.search, 'i');
+    filter.$or = [{ name: re }, { email: re }];
+  }
 
+  const [users, total] = await Promise.all([
+    User.find(filter).sort('-createdAt').skip((page - 1) * limit).limit(limit).select('-__v -password'),
+    User.countDocuments(filter),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    data: { users },
+  });
+});
 const updateAddress = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user.id);
   const addr = user.addresses.id(req.params.addressId);
@@ -77,4 +97,4 @@ const getOrderHistory = catchAsync(async (req, res) => {
   });
 });
 
-module.exports = { getProfile, updateProfile, addAddress, updateAddress, deleteAddress, getOrderHistory };
+module.exports = { getProfile,getAllUsers, updateProfile, addAddress, updateAddress, deleteAddress, getOrderHistory };
