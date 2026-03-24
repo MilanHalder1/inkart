@@ -1,8 +1,8 @@
 'use strict';
 
-const Category = require('../../models/Category');
-const AppError = require('../../utils/AppError');
-const catchAsync = require('../../utils/catchAsync');
+const Category = require('../models/Category');
+const AppError = require('../utilities/AppError');
+const catchAsync = require('../utilities/CatchAsync');
 
 const getAllCategories = catchAsync(async (req, res) => {
   const categories = await Category.find()

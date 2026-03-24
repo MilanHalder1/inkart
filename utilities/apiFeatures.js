@@ -1,27 +1,62 @@
 'use strict';
 
-const jwt = require('jsonwebtoken');
+class APIFeatures {
+  constructor(query, queryString) {
+    this.query = query;
+    this.queryString = queryString;
+  }
 
-const signToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
+  filter() {
+    const queryObj = { ...this.queryString };
+    const excludedFields = ['page', 'sort', 'limit', 'fields', 'search'];
+    excludedFields.forEach((el) => delete queryObj[el]);
 
-const signRefreshToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_REFRESH_SECRET, { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d' });
+    // Advanced filtering: gte, gt, lte, lt
+    let queryStr = JSON.stringify(queryObj);
+    queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
 
-const createSendToken = (user, statusCode, res) => {
-  const token = signToken(user._id);
-  const refreshToken = signRefreshToken(user._id);
+    this.query = this.query.find(JSON.parse(queryStr));
+    return this;
+  }
 
-  // Strip sensitive fields
-  user.password = undefined;
-  user.refreshToken = undefined;
+  search(fields = []) {
+    if (this.queryString.search) {
+      const regex = new RegExp(this.queryString.search, 'i');
+      const searchConditions = fields.map((field) => ({ [field]: regex }));
+      this.query = this.query.find({ $or: searchConditions });
+    }
+    return this;
+  }
 
-  res.status(statusCode).json({
-    success: true,
-    token,
-    refreshToken,
-    data: { user },
-  });
-};
+  sort() {
+    if (this.queryString.sort) {
+      const sortBy = this.queryString.sort.split(',').join(' ');
+      this.query = this.query.sort(sortBy);
+    } else {
+      this.query = this.query.sort('-createdAt');
+    }
+    return this;
+  }
 
-module.exports = { signToken, signRefreshToken, createSendToken };
+  limitFields() {
+    if (this.queryString.fields) {
+      const fields = this.queryString.fields.split(',').join(' ');
+      this.query = this.query.select(fields);
+    } else {
+      this.query = this.query.select('-__v');
+    }
+    return this;
+  }
+
+  paginate() {
+    const page = Math.max(1, parseInt(this.queryString.page, 10) || 1);
+    const limit = Math.min(100, parseInt(this.queryString.limit, 10) || 20);
+    const skip = (page - 1) * limit;
+    this.query = this.query.skip(skip).limit(limit);
+    this._page = page;
+    this._limit = limit;
+    return this;
+  }
+}
+
+module.exports = APIFeatures;

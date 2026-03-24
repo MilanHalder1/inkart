@@ -93,11 +93,10 @@ productSchema.virtual('isInStock').get(function () {
   return this.stock > 0;
 });
 
-productSchema.pre('save', function (next) {
-  if (this.isModified('name') && !this.slug) {
+productSchema.pre('save', function () {
+  if (this.isModified('name')) {
     this.slug = slugify(this.name, { lower: true, strict: true });
   }
-  next();
 });
 
 module.exports = mongoose.model('Product', productSchema);
