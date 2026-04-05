@@ -1,10 +1,10 @@
 'use strict';
 
 const router = require('express').Router();
-const { protect } = require('../../middleware/auth');
-const Order = require('../../models/Order');
-const AppError = require('../../utils/AppError');
-const catchAsync = require('../../utils/catchAsync');
+const { protect } = require('../middleware/Auth');
+const Order = require('../models/Order');
+const AppError = require('../utilities/AppError');
+const catchAsync = require('../utilities/CatchAsync');
 
 router.use(protect);
 

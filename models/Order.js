@@ -76,14 +76,26 @@ orderSchema.index({ createdAt: -1 });
 orderSchema.index({ user: 1, orderStatus: 1 });
 
 // Auto-generate order number
-orderSchema.pre('save', async function (next) {
+// orderSchema.pre('save', async function (next) {
+//   if (this.isNew) {
+//     const date = new Date();
+//     const prefix = `ORD-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
+//     const count = await mongoose.model('Order').countDocuments();
+//     this.orderNumber = `${prefix}-${String(count + 1).padStart(5, '0')}`;
+//   }
+//   next();
+// });
+
+orderSchema.pre('save', async function () {
   if (this.isNew) {
     const date = new Date();
+
     const prefix = `ORD-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}`;
+
     const count = await mongoose.model('Order').countDocuments();
+
     this.orderNumber = `${prefix}-${String(count + 1).padStart(5, '0')}`;
   }
-  next();
 });
 
 module.exports = mongoose.model('Order', orderSchema);

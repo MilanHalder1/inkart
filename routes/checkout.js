@@ -1,8 +1,8 @@
 'use strict';
 
 const router = require('express').Router();
-const { protect } = require('../../middleware/auth');
-const { applyCoupon, removeCoupon, createRazorpayOrder, verifyPayment, getOrderDetails } = require('../../controllers/user/checkout.controller');
+const { protect } = require('../middleware/Auth');
+const { applyCoupon, removeCoupon, createRazorpayOrder, verifyPayment, getOrderDetails } = require('../controllers/checkout');
 
 router.use(protect);
 

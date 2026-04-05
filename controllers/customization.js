@@ -1,11 +1,11 @@
 
 'use strict';
 
-const Customization = require('../../models/Customization');
-const Product = require('../../models/Product');
-const { createUploader } = require('../../config/cloudinary');
-const AppError = require('../../utils/AppError');
-const catchAsync = require('../../utils/catchAsync');
+const Customization = require('../models/Customization');
+const Product = require('../models/Product');
+const { createUploader } = require('../config/cloudinary');
+const AppError = require('../utilities/AppError');
+const catchAsync = require('../utilities/CatchAsync');
 
 // Upload background image for a customizable product
 const uploadBackgroundImage = [

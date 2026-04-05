@@ -1,7 +1,7 @@
 'use strict';
 
 const router = require('express').Router();
-const { protect } = require('../../middleware/auth');
+const { protect } = require('../middleware/Auth');
 const {
   uploadBackgroundImage,
   saveDesign,
@@ -9,7 +9,7 @@ const {
   getDesign,
   getUserDesigns,
   deleteDesign,
-} = require('../../controllers/user/customization.controller');
+} = require('../controllers/customization');
 
 router.use(protect);
 
@@ -20,4 +20,4 @@ router.delete('/:customizationId', deleteDesign);
 router.post('/products/:productId/background', uploadBackgroundImage);
 router.patch('/:customizationId/preview', uploadPreviewImage);
 
-module.exports = router;
+module.exports = router;  

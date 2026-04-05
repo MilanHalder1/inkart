@@ -1,9 +1,9 @@
 'use strict';
 
-const Wishlist = require('../../models/Wishlist');
-const Product = require('../../models/Product');
-const AppError = require('../../utils/AppError');
-const catchAsync = require('../../utils/catchAsync');
+const Wishlist = require('../models/Wishlist');
+const Product = require('../models/Product');
+const AppError = require('../utilities/AppError');
+const catchAsync = require('../utilities/CatchAsync');
 
 const getWishlist = catchAsync(async (req, res) => {
   const wishlist = await Wishlist.findOne({ user: req.user.id })

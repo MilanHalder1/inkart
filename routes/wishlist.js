@@ -1,8 +1,8 @@
 'use strict';
 
 const router = require('express').Router();
-const { protect } = require('../../middleware/auth');
-const { getWishlist, addToWishlist, removeFromWishlist } = require('../../controllers/user/wishlist.controller');
+const { protect } = require('../middleware/Auth');
+const { getWishlist, addToWishlist, removeFromWishlist } = require('../controllers/wishlist');
 
 router.use(protect);
 router.get('/', getWishlist);

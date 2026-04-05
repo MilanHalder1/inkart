@@ -2,14 +2,14 @@
 
 const crypto = require('crypto');
 const mongoose = require('mongoose');
-const Cart = require('../../models/Cart');
-const Order = require('../../models/Order');
-const Product = require('../../models/Product');
-const Coupon = require('../../models/Coupon');
-const User = require('../../models/User');
-const razorpay = require('../../config/razorpay');
-const AppError = require('../../utils/AppError');
-const catchAsync = require('../../utils/catchAsync');
+const Cart = require('../models/Cart');
+const Order = require('../models/Order');
+const Product = require('../models/Product');
+const Coupon = require('../models/Coupon');
+const User = require('../models/User');
+const razorpay = require('../config/razorpay');
+const AppError = require('../utilities/AppError');
+const catchAsync = require('../utilities/CatchAsync');
 
 // ─── Apply / Remove Coupon ──────────────────────────────────────────────────
 const applyCoupon = catchAsync(async (req, res, next) => {
