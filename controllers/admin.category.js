@@ -19,13 +19,18 @@ const createCategory = catchAsync(async (req, res) => {
 });
 
 const updateCategory = catchAsync(async (req, res, next) => {
-  const image = req.file ? { url: req.file.path, publicId: req.file.filename } : undefined;
+  const image = req.file
+    ? { url: req.file.path, publicId: req.file.filename }
+    : undefined;
+
   const category = await Category.findByIdAndUpdate(
     req.params.id,
     { ...req.body, ...(image && { image }) },
     { new: true, runValidators: true }
   );
+
   if (!category) return next(new AppError('Category not found.', 404));
+
   res.status(200).json({ success: true, data: { category } });
 });
 
