@@ -23,10 +23,11 @@ const userOrderRoutes = require('./routes/order');
 const userCheckoutRoutes = require('./routes/checkout');
 const adminCouponRoutes=require('./routes/coupon') 
 const userCustomizationRoutes = require('./routes/customization');
-
+const adminUserRouter=require('./routes/admin.user')
 const adminAuthRoutes = require('./routes/admin.auth');
 const adminProductRoutes = require('./routes/admin.product');
 const adminCategoryRoutes = require('./routes/admin.category');
+const webhookRoutes=require('./routes/webhook')
 // const adminOrderRoutes = require('./routes/admin.order');
 // const adminUploadRoutes = require('./routes/admin.upload');
 
@@ -38,7 +39,7 @@ connectDB();
 
 app.use(helmet());
 app.use(hpp());
-
+  
 app.use(cors({
   origin: (origin, callback) => {
     // allow requests with no origin (like mobile apps, curl, Postman)
@@ -84,6 +85,7 @@ app.use(`${API}/wishlist`, userWishlistRoutes);
 app.use(`${API}/orders`, userOrderRoutes);
 app.use(`${API}/admin/coupons`,adminCouponRoutes)
 app.use(`${API}/checkout`, userCheckoutRoutes);
+app.use(`${API}/admin`,adminUserRouter)
 
 app.use(`${API}/customization`, userCustomizationRoutes);
 
@@ -91,6 +93,7 @@ app.use(`${API}/customization`, userCustomizationRoutes);
 app.use(`${API}/admin/auth`, adminAuthRoutes);
 app.use(`${API}/admin/products`, adminProductRoutes);
 app.use(`${API}/admin/categories`, adminCategoryRoutes);
+app.use(`${API}/webhooks`,webhookRoutes)
 // app.use(`${API}/admin/orders`, adminOrderRoutes);
 // app.use(`${API}/admin/uploads`, adminUploadRoutes);
  
