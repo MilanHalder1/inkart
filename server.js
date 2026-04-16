@@ -27,7 +27,7 @@ const adminUserRouter=require('./routes/admin.user')
 const adminAuthRoutes = require('./routes/admin.auth');
 const adminProductRoutes = require('./routes/admin.product');
 const adminCategoryRoutes = require('./routes/admin.category');
-const webhookRoutes=require('./routes/webhook')
+// const webhookRoutes=require('./routes/webhook')
 // const adminOrderRoutes = require('./routes/admin.order');
 // const adminUploadRoutes = require('./routes/admin.upload');
 
@@ -93,7 +93,7 @@ app.use(`${API}/customization`, userCustomizationRoutes);
 app.use(`${API}/admin/auth`, adminAuthRoutes);
 app.use(`${API}/admin/products`, adminProductRoutes);
 app.use(`${API}/admin/categories`, adminCategoryRoutes);
-app.use(`${API}/webhooks`,webhookRoutes)
+// app.use(`${API}/webhooks`,webhookRoutes)
 // app.use(`${API}/admin/orders`, adminOrderRoutes);
 // app.use(`${API}/admin/uploads`, adminUploadRoutes);
  
