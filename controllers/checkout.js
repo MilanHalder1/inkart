@@ -252,6 +252,7 @@ const verifyPayment = catchAsync(async (req, res, next) => {
 
     // 📧 Send Emails
     await sendOrderPlacedEmail(user, updatedOrder);
+    console.log('gmail=====>',user)
     await sendInvoiceEmail(user, updatedOrder, upload.secure_url);
 
     // 🚚 Create Shipment
