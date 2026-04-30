@@ -27,11 +27,8 @@ const adminUserRouter=require('./routes/admin.user')
 const adminAuthRoutes = require('./routes/admin.auth');
 const adminProductRoutes = require('./routes/admin.product');
 const adminCategoryRoutes = require('./routes/admin.category');
-// const webhookRoutes=require('./routes/webhook')
-// const adminOrderRoutes = require('./routes/admin.order');
-// const adminUploadRoutes = require('./routes/admin.upload');
-
-// const superAdminRoutes = require('./routes/superadmin/');
+const webhookRoutes=require('./routes/webhook')
+const adminOrderRoutes = require('./routes/admin.order');
 
 const app = express();
 
@@ -42,10 +39,7 @@ app.use(hpp());
   
 app.use(cors({
   origin: (origin, callback) => {
-    // allow requests with no origin (like mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
-
-    // allow all origins
     return callback(null, origin);
   },
   credentials: true,
@@ -93,8 +87,8 @@ app.use(`${API}/customization`, userCustomizationRoutes);
 app.use(`${API}/admin/auth`, adminAuthRoutes);
 app.use(`${API}/admin/products`, adminProductRoutes);
 app.use(`${API}/admin/categories`, adminCategoryRoutes);
-// app.use(`${API}/webhooks`,webhookRoutes)
-// app.use(`${API}/admin/orders`, adminOrderRoutes);
+app.use(`${API}/webhooks`,webhookRoutes)
+app.use(`${API}/admin/orders`, adminOrderRoutes);
 // app.use(`${API}/admin/uploads`, adminUploadRoutes);
  
 // // Super Admin routes

@@ -1,8 +1,9 @@
 'use strict';
 
-const Order = require('../../models/Order');
-const AppError = require('../../utils/AppError');
-const catchAsync = require('../../utils/catchAsync');
+const Order = require('../models/Order');
+const AppError = require('../utilities/AppError');
+const catchAsync = require('../utilities/CatchAsync');
+const User=require('../models/User')
 
 const VALID_TRANSITIONS = {
   placed: ['confirmed', 'cancelled'],
@@ -100,4 +101,22 @@ const cancelOrder = catchAsync(async (req, res, next) => {
   res.status(200).json({ success: true, message: 'Order cancelled and stock restored.', data: { order } });
 });
 
-module.exports = { getAllOrders, getOrder, updateOrderStatus, cancelOrder };
+const markCODAsPaid = catchAsync(async (req, res, next) => {
+  const order = await Order.findById(req.params.id);
+  const user = await User.findById(order.user);
+
+  order.paymentStatus = 'paid';
+
+  await order.save();
+
+  const invoicePath = await generateInvoice(order);
+
+  await sendInvoiceEmail(user, order, invoicePath);
+
+  res.status(200).json({
+    success: true,
+    message: 'COD marked as paid',
+  });
+});
+
+module.exports = { getAllOrders, getOrder, updateOrderStatus, cancelOrder,markCODAsPaid };

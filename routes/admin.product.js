@@ -12,6 +12,8 @@ const productImagesUpload = createUploader('products').array('images', 10);
 
 router.use(protect, restrictTo('admin', 'superadmin'));
 
+
+
 router.route('/')
   .get(getAllProducts)
   .post(productImagesUpload, createProduct);
