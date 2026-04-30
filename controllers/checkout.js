@@ -130,7 +130,7 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
 });
 
 // ─── Verify Payment & Confirm Order ────────────────────────────────────────
-'use strict';
+
 
 const verifyPayment = catchAsync(async (req, res, next) => {
   const {
