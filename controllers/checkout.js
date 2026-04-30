@@ -127,144 +127,86 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
   });
 });
 
-
+// ─── Verify Payment & Confirm Order ────────────────────────────────────────
 const verifyPayment = catchAsync(async (req, res, next) => {
-  const {
-    razorpayOrderId,
-    razorpayPaymentId,
-    razorpaySignature,
-    orderId,
-  } = req.body;
+  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = req.body;
 
-  // 1. Verify Razorpay Signature
+  // 1. Verify signature
   const expectedSignature = crypto
     .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
     .digest('hex');
 
   if (expectedSignature !== razorpaySignature) {
-    return next(
-      new AppError(
-        'Payment verification failed. Invalid signature.',
-        400
-      )
-    );
+    return next(new AppError('Payment verification failed. Invalid signature.', 400));
   }
 
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // 2. Find Order
     const order = await Order.findById(orderId).session(session);
+    if (!order) throw new AppError('Order not found.', 404);
+    if (order.paymentStatus === 'paid') throw new AppError('Order already paid.', 400);
 
-    if (!order) {
-      throw new AppError('Order not found.', 404);
-    }
-
-    if (order.paymentStatus === 'paid') {
-      throw new AppError('Order already paid.', 400);
-    }
-
-    // 3. IMPORTANT → Capture Payment Manually
-    // This fixes "Authorized but not Captured" issue
-    await razorpay.payments.capture(
-      razorpayPaymentId,
-      Math.round(order.total * 100), // amount in paise
-      'INR'
-    );
-
-    // 4. Deduct Stock for Stocked Products
+    // 2. Deduct stock for stocked products (atomic)
     for (const item of order.items) {
       const product = await Product.findById(item.product).session(session);
-
       if (product?.productType === 'stocked') {
         if (item.variantId) {
           const variant = product.variants.id(item.variantId);
-
-          if (!variant || variant.stock < item.quantity) {
-            throw new AppError(
-              `Stock depleted for ${product.name}.`,
-              400
-            );
-          }
-
+          if (!variant || variant.stock < item.quantity) throw new AppError(`Stock depleted for ${product.name}.`, 400);
           variant.stock -= item.quantity;
         } else {
-          if (product.stock < item.quantity) {
-            throw new AppError(
-              `Stock depleted for ${product.name}.`,
-              400
-            );
-          }
-
+          if (product.stock < item.quantity) throw new AppError(`Stock depleted for ${product.name}.`, 400);
           product.stock -= item.quantity;
         }
-
         product.soldCount += item.quantity;
-
         await product.save({ session });
       }
     }
 
-    // 5. Mark Coupon as Used
+    // 3. Mark coupon as used
     if (order.coupon) {
-      await Coupon.findByIdAndUpdate(
-        order.coupon,
-        {
-          $inc: { usageCount: 1 },
-          $push: { usedBy: order.user },
-        },
-        { session }
-      );
+      const Coupon = require('../../models/Coupon');
+      await Coupon.findByIdAndUpdate(order.coupon, {
+        $inc: { usageCount: 1 },
+        $push: { usedBy: order.user },
+      }, { session });
     }
 
-    // 6. Update Order Status
+    // 4. Update order
     order.paymentStatus = 'paid';
     order.orderStatus = 'confirmed';
     order.razorpayPaymentId = razorpayPaymentId;
     order.razorpaySignature = razorpaySignature;
-
-    order.statusHistory.push({
-      status: 'confirmed',
-      note: 'Payment verified and captured successfully.',
-      updatedBy: order.user,
-    });
-
+    order.statusHistory.push({ status: 'confirmed', note: 'Payment verified successfully.', updatedBy: order.user });
     await order.save({ session });
 
-    // 7. Clear Cart
-    await Cart.findOneAndUpdate(
-      { user: order.user },
-      {
-        items: [],
-        coupon: null,
-        couponDiscount: 0,
-      },
-      { session }
-    );
+    // 5. Clear cart
+    await Cart.findOneAndUpdate({ user: order.user }, { items: [], coupon: null, couponDiscount: 0 }, { session });
 
-    // 8. Commit DB Transaction
     await session.commitTransaction();
+    const updatedOrder = await Order.findById(order._id);
+   const user = await User.findById(order.user);
+ const invoicePath = await generateInvoice(order);
+await sendOrderPlacedEmail(user, order);
+await sendInvoiceEmail(user, order, invoicePath);
 
-    // 9. Create Shipment (Shiprocket)
-    await attachShipmentToOrder(order);
+    await attachShipmentToOrder(updatedOrder);
 
     res.status(200).json({
       success: true,
-      message: 'Payment verified, captured & order confirmed!',
-      data: {
-        order,
-      },
+      message: 'Payment verified. Order confirmed!',
+      data: { order },
     });
-
   } catch (err) {
     await session.abortTransaction();
-    next(err);
+    throw err;
   } finally {
     session.endSession();
   }
-}); 
+});
 
 const createCODOrder = catchAsync(async (req, res, next) => {
   const { addressId } = req.body;
