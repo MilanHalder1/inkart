@@ -12,7 +12,7 @@ const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
 const { createShipment } = require('../config/shiprocket');
 const { generateInvoice } = require('../utilities/invoice');
- 
+
 const { sendOrderPlacedEmail, sendInvoiceEmail } = require('../config/order');
 const { uploadInvoiceToCloudinary } = require('../utilities/cloudinaryUploadfFunction');
 
@@ -130,10 +130,17 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
 });
 
 // ─── Verify Payment & Confirm Order ────────────────────────────────────────
-const verifyPayment = catchAsync(async (req, res, next) => {
-  const { razorpayOrderId, razorpayPaymentId, razorpaySignature, orderId } = req.body;
+'use strict';
 
-  // 1. Verify signature
+const verifyPayment = catchAsync(async (req, res, next) => {
+  const {
+    razorpayOrderId,
+    razorpayPaymentId,
+    razorpaySignature,
+    orderId,
+  } = req.body;
+
+  // 🔐 Verify Razorpay Signature
   const expectedSignature = crypto
     .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
     .update(`${razorpayOrderId}|${razorpayPaymentId}`)
@@ -144,77 +151,121 @@ const verifyPayment = catchAsync(async (req, res, next) => {
   }
 
   const session = await mongoose.startSession();
-  session.startTransaction();
+  let order;
 
   try {
-    const order = await Order.findById(orderId).session(session);
-    if (!order) throw new AppError('Order not found.', 404);
-    if (order.paymentStatus === 'paid') throw new AppError('Order already paid.', 400);
+    session.startTransaction();
 
-    // 2. Deduct stock for stocked products (atomic)
+    // 🔍 Get Order
+    order = await Order.findById(orderId).session(session);
+    if (!order) throw new AppError('Order not found.', 404);
+
+    if (order.paymentStatus === 'paid') {
+      throw new AppError('Order already paid.', 400);
+    }
+
+    // 📦 STOCK VALIDATION + DEDUCTION
     for (const item of order.items) {
       const product = await Product.findById(item.product).session(session);
+
       if (product?.productType === 'stocked') {
         if (item.variantId) {
           const variant = product.variants.id(item.variantId);
-          if (!variant || variant.stock < item.quantity) throw new AppError(`Stock depleted for ${product.name}.`, 400);
+          if (!variant || variant.stock < item.quantity) {
+            throw new AppError(`Stock depleted for ${product.name}.`, 400);
+          }
           variant.stock -= item.quantity;
         } else {
-          if (product.stock < item.quantity) throw new AppError(`Stock depleted for ${product.name}.`, 400);
+          if (product.stock < item.quantity) {
+            throw new AppError(`Stock depleted for ${product.name}.`, 400);
+          }
           product.stock -= item.quantity;
         }
+
         product.soldCount += item.quantity;
         await product.save({ session });
       }
     }
 
-    // 3. Mark coupon as used
+    // 🎟️ COUPON USAGE
     if (order.coupon) {
-      const Coupon = require('../../models/Coupon');
-      await Coupon.findByIdAndUpdate(order.coupon, {
-        $inc: { usageCount: 1 },
-        $push: { usedBy: order.user },
-      }, { session });
+      await Coupon.findByIdAndUpdate(
+        order.coupon,
+        {
+          $inc: { usageCount: 1 },
+          $push: { usedBy: order.user },
+        },
+        { session }
+      );
     }
 
-    // 4. Update order
+    // 🧾 UPDATE ORDER
     order.paymentStatus = 'paid';
     order.orderStatus = 'confirmed';
     order.razorpayPaymentId = razorpayPaymentId;
     order.razorpaySignature = razorpaySignature;
-    order.statusHistory.push({ status: 'confirmed', note: 'Payment verified successfully.', updatedBy: order.user });
+
+    order.statusHistory.push({
+      status: 'confirmed',
+      note: 'Payment verified successfully.',
+      updatedBy: order.user,
+    });
+
     await order.save({ session });
 
-    // 5. Clear cart
-    await Cart.findOneAndUpdate({ user: order.user }, { items: [], coupon: null, couponDiscount: 0 }, { session });
+    // 🛒 CLEAR CART
+    await Cart.findOneAndUpdate(
+      { user: order.user },
+      { items: [], coupon: null, couponDiscount: 0 },
+      { session }
+    );
 
+    // ✅ COMMIT TRANSACTION
     await session.commitTransaction();
-    const updatedOrder = await Order.findById(order._id);
-    const user = await User.findById(order.user);
-   const buffer = await generateInvoice(updatedOrder);
-const upload = await uploadInvoiceToCloudinary(
-  buffer,
-  updatedOrder.orderNumber
-);
-// 💾 Save invoice URL
-updatedOrder.invoiceUrl = upload.secure_url;
-await updatedOrder.save();
-    await sendOrderPlacedEmail(user, order);
-    await sendInvoiceEmail(user, order, invoicePath);
+    session.endSession();
 
-    await attachShipmentToOrder(updatedOrder);
-
-    res.status(200).json({
-      success: true,
-      message: 'Payment verified. Order confirmed!',
-      data: { order },
-    });
   } catch (err) {
     await session.abortTransaction();
-    throw err;
-  } finally {
     session.endSession();
+    return next(err);
   }
+
+  // 🚀 POST-TRANSACTION (NO DB LOCKS HERE)
+  try {
+    const updatedOrder = await Order.findById(order._id);
+    const user = await User.findById(order.user);
+
+    // 🧾 Generate Invoice (BUFFER)
+    const buffer = await generateInvoice(updatedOrder);
+
+    // ☁️ Upload to Cloudinary
+    const { uploadInvoiceToCloudinary } = require('../utilities/uploadInvoice');
+
+    const upload = await uploadInvoiceToCloudinary(
+      buffer,
+      updatedOrder.orderNumber
+    );
+
+    // 💾 Save Invoice URL
+    updatedOrder.invoiceUrl = upload.secure_url;
+    await updatedOrder.save();
+
+    // 📧 Send Emails
+    await sendOrderPlacedEmail(user, updatedOrder);
+    await sendInvoiceEmail(user, updatedOrder, upload.secure_url);
+
+    // 🚚 Create Shipment
+    await attachShipmentToOrder(updatedOrder);
+
+  } catch (err) {
+    console.error('⚠️ Post-payment error:', err.message);
+    // ❗ Do NOT throw — order already confirmed
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: 'Payment verified. Order confirmed!',
+  });
 });
 
 const createCODOrder = catchAsync(async (req, res, next) => {
