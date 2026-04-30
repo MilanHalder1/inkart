@@ -239,7 +239,6 @@ const verifyPayment = catchAsync(async (req, res, next) => {
     const buffer = await generateInvoice(updatedOrder);
 
     // ☁️ Upload to Cloudinary
-    const { uploadInvoiceToCloudinary } = require('../utilities/uploadInvoice');
 
     const upload = await uploadInvoiceToCloudinary(
       buffer,
