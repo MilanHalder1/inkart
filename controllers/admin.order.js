@@ -117,6 +117,6 @@ const markCODAsPaid = catchAsync(async (req, res, next) => {
     success: true,
     message: 'COD marked as paid',
   });
-});
+}); //code 
 
 module.exports = { getAllOrders, getOrder, updateOrderStatus, cancelOrder,markCODAsPaid };
