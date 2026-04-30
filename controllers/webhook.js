@@ -3,6 +3,8 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const { generateInvoice } = require('../utilities/invoice');
 const { sendInvoiceEmail } = require('../config/order');
+const { uploadInvoiceToCloudinary } = require('../utilities/cloudinaryUploadfFunction');
+
 
 const shiprocketWebhook = async (req, res) => {
   try {
@@ -74,10 +76,20 @@ const shiprocketWebhook = async (req, res) => {
         const user = await User.findById(order.user);
 
         // 🧾 Generate invoice
-        const invoicePath = await generateInvoice(order);
+        const buffer = await generateInvoice(order);
 
-        // 📧 Send email
-        await sendInvoiceEmail(user, order, invoicePath);
+        // ☁️ Upload to Cloudinary
+        const upload = await uploadInvoiceToCloudinary(
+          buffer,
+          order.orderNumber
+        );
+
+        // 💾 Save invoice URL
+        order.invoiceUrl = upload.secure_url;
+        await order.save();
+
+        // 📧 Send email with URL
+        await sendInvoiceEmail(user, order, upload.secure_url);
 
         console.log('✅ COD Invoice sent');
       } catch (err) {

@@ -1,26 +1,26 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
 
-exports.generateInvoice = async (order) => {
-  const fileName = `invoice-${order.orderNumber}.pdf`;
-  const filePath = path.join(__dirname, `../invoices/${fileName}`);
+const generateInvoice = async (order) => {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument();
+    const buffers = [];
 
-  const doc = new PDFDocument();
-  doc.pipe(fs.createWriteStream(filePath));
+    doc.on('data', buffers.push.bind(buffers));
+    doc.on('end', () => {
+      const pdfData = Buffer.concat(buffers);
+      resolve(pdfData);
+    });
 
-  doc.fontSize(18).text(`Invoice - ${order.orderNumber}`);
-  doc.text(`Customer: ${order.shippingAddress.fullName}`);
-  doc.text(`Total: ₹${order.total}`);
+    doc.on('error', reject);
 
-  order.items.forEach(item => {
-    doc.text(`${item.name} x ${item.quantity}`);
+    // 🧾 Your invoice content
+    doc.fontSize(18).text(`Invoice - ${order.orderNumber}`);
+    doc.text(`Total: ₹${order.total}`);
+    doc.text(`Payment: ${order.paymentMethod}`);
+    doc.text(`Status: ${order.paymentStatus}`);
+
+    doc.end();
   });
-
-  doc.end();
-
-  order.invoiceUrl = filePath;
-  await order.save();
-
-  return filePath;
 };
+
+module.exports = { generateInvoice };

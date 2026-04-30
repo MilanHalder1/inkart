@@ -12,7 +12,9 @@ const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
 const { createShipment } = require('../config/shiprocket');
 const { generateInvoice } = require('../utilities/invoice');
+ 
 const { sendOrderPlacedEmail, sendInvoiceEmail } = require('../config/order');
+const { uploadInvoiceToCloudinary } = require('../utilities/cloudinaryUploadfFunction');
 
 const applyCoupon = catchAsync(async (req, res, next) => {
   const { code } = req.body;
@@ -188,10 +190,17 @@ const verifyPayment = catchAsync(async (req, res, next) => {
 
     await session.commitTransaction();
     const updatedOrder = await Order.findById(order._id);
-   const user = await User.findById(order.user);
- const invoicePath = await generateInvoice(order);
-await sendOrderPlacedEmail(user, order);
-await sendInvoiceEmail(user, order, invoicePath);
+    const user = await User.findById(order.user);
+   const buffer = await generateInvoice(updatedOrder);
+const upload = await uploadInvoiceToCloudinary(
+  buffer,
+  updatedOrder.orderNumber
+);
+// 💾 Save invoice URL
+updatedOrder.invoiceUrl = upload.secure_url;
+await updatedOrder.save();
+    await sendOrderPlacedEmail(user, order);
+    await sendInvoiceEmail(user, order, invoicePath);
 
     await attachShipmentToOrder(updatedOrder);
 
@@ -299,4 +308,4 @@ exports.createCODOrder = catchAsync(async (req, res, next) => {
     data: { order },
   });
 });
-module.exports = { applyCoupon, removeCoupon, createRazorpayOrder, verifyPayment,createCODOrder, getOrderDetails, attachShipmentToOrder };
+module.exports = { applyCoupon, removeCoupon, createRazorpayOrder, verifyPayment, createCODOrder, getOrderDetails, attachShipmentToOrder };
