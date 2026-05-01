@@ -10,7 +10,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-exports.sendEmail = async ({ to, subject, html, attachments = [] }) => {
+exports.sendEmail = async ({ to, subject, html, attachments = [  {
+    filename: `invoice-${order.orderNumber}.pdf`,
+    path: invoiceUrl, // ✅ Cloudinary URL (NOT local file)
+  }] }) => {
   await transporter.sendMail({
     from: `"Your Store" <${process.env.EMAIL_USER}>`,
     to,

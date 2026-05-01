@@ -231,36 +231,44 @@ const verifyPayment = catchAsync(async (req, res, next) => {
   }
 
   // 🚀 POST-TRANSACTION (NO DB LOCKS HERE)
-  try {
-    const updatedOrder = await Order.findById(order._id);
-    const user = await User.findById(order.user);
+ const { uploadInvoiceToCloudinary } = require('../utilities/uploadInvoice');
 
-    // 🧾 Generate Invoice (BUFFER)
-    const buffer = await generateInvoice(updatedOrder);
+try {
+  const updatedOrder = await Order.findById(order._id);
+  const user = await User.findById(order.user);
 
-    // ☁️ Upload to Cloudinary
+  console.log('➡️ Generating invoice');
 
-    const upload = await uploadInvoiceToCloudinary(
-      buffer,
-      updatedOrder.orderNumber
-    );
+  // 🧾 Generate buffer
+  const buffer = await generateInvoice(updatedOrder);
 
-    // 💾 Save Invoice URL
-    updatedOrder.invoiceUrl = upload.secure_url;
-    await updatedOrder.save();
+  console.log('➡️ Uploading invoice');
 
-    // 📧 Send Emails
-    await sendOrderPlacedEmail(user, updatedOrder);
-    console.log('gmail=====>',user)
-    await sendInvoiceEmail(user, updatedOrder, upload.secure_url);
+  // ☁️ Upload
+  const upload = await uploadInvoiceToCloudinary(
+    buffer,
+    updatedOrder.orderNumber
+  );
 
-    // 🚚 Create Shipment
-    await attachShipmentToOrder(updatedOrder);
+  console.log('➡️ Saving invoice URL');
 
-  } catch (err) {
-    console.error('⚠️ Post-payment error:', err.message);
-    // ❗ Do NOT throw — order already confirmed
-  }
+  updatedOrder.invoiceUrl = upload.secure_url;
+  await updatedOrder.save();
+
+  console.log('➡️ Sending emails');
+
+  await sendOrderPlacedEmail(user, updatedOrder);
+  await sendInvoiceEmail(user, updatedOrder, upload.secure_url);
+
+  console.log('➡️ Creating shipment');
+
+  await attachShipmentToOrder(updatedOrder);
+
+  console.log('✅ All done');
+
+} catch (err) {
+  console.error('❌ Post-payment error:', err);
+}
 
   return res.status(200).json({
     success: true,
