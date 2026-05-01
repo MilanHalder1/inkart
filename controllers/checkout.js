@@ -256,6 +256,7 @@ try {
 
   console.log('➡️ Sending emails');
 
+  console.log("updated  order ====>",updatedOrder)
   await sendOrderPlacedEmail(user, updatedOrder);
   await sendInvoiceEmail(user, updatedOrder, upload.secure_url);
 

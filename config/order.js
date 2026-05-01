@@ -1,14 +1,16 @@
 const { sendEmail } = require('../utilities/email');
 
 exports.sendOrderPlacedEmail = async (user, order) => {
+  console.log('User,order====>',user,order)
   await sendEmail({
     to: user.email,
     subject: 'Order Placed Successfully',
-    html: `<h3>Order ${order.orderNumber} placed successfully</h3>`,
+    html: `<h3>Order ${order?.orderNumber} placed successfully</h3>`,
   });
 };
 
 exports.sendInvoiceEmail = async (user, order, invoicePath) => {
+  console.log("user, order, invoicePath===>",user, order, invoicePath)
   await sendEmail({
     to: user.email,
     subject: 'Your Invoice',
