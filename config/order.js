@@ -1,20 +1,35 @@
 const { sendEmail } = require('../utilities/email');
 
 exports.sendOrderPlacedEmail = async (user, order) => {
-  console.log('User,order====>',user,order)
+  const html = `
+    <h2>Order Confirmed</h2>
+    <p>Hi ${user.name},</p>
+    <p>Your order <b>${order.orderNumber}</b> has been placed successfully.</p>
+    <p>Total: ₹${order.total}</p>
+  `;
+
   await sendEmail({
     to: user.email,
     subject: 'Order Placed Successfully',
-    html: `<h3>Order ${order?.orderNumber} placed successfully</h3>`,
+    html,
   });
 };
+exports.sendInvoiceEmail = async (user, order, invoiceUrl) => {
+  const html = `
+    <h2>Invoice</h2>
+    <p>Hi ${user.name},</p>
+    <p>Here is your invoice for order <b>${order.orderNumber}</b>.</p>
+  `;
 
-exports.sendInvoiceEmail = async (user, order, invoicePath) => {
-  console.log("user, order, invoicePath===>",user, order, invoicePath)
   await sendEmail({
     to: user.email,
     subject: 'Your Invoice',
-    html: `<h3>Invoice for ${order.orderNumber}</h3>`,
-    attachments: [{ filename: 'invoice.pdf', path: invoicePath }],
+    html,
+    attachments: [
+      {
+        filename: `invoice-${order.orderNumber}.pdf`,
+        path: invoiceUrl, // ✅ Cloudinary URL
+      },
+    ],
   });
 };
