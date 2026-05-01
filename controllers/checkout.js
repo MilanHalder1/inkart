@@ -231,7 +231,6 @@ const verifyPayment = catchAsync(async (req, res, next) => {
   }
 
   // 🚀 POST-TRANSACTION (NO DB LOCKS HERE)
- const { uploadInvoiceToCloudinary } = require('../utilities/uploadInvoice');
 
 try {
   const updatedOrder = await Order.findById(order._id);
