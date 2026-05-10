@@ -29,7 +29,7 @@ const adminProductRoutes = require('./routes/admin.product');
 const adminCategoryRoutes = require('./routes/admin.category');
 const webhookRoutes=require('./routes/webhook')
 const adminOrderRoutes = require('./routes/admin.order');
-
+const userReview=require('./routes/review')
 const app = express();
 
 connectDB();
@@ -80,7 +80,7 @@ app.use(`${API}/orders`, userOrderRoutes);
 app.use(`${API}/admin/coupons`,adminCouponRoutes)
 app.use(`${API}/checkout`, userCheckoutRoutes);
 app.use(`${API}/admin`,adminUserRouter)
-
+app.use(`${API}/review`,userReview)
 app.use(`${API}/customization`, userCustomizationRoutes);
 
 // Admin routes

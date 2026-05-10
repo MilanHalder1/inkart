@@ -18,6 +18,7 @@ router.get('/all', getAllUsers);
 router.post('/me/addresses', addAddress);
 router.patch('/me/addresses/:addressId', updateAddress);
 router.delete('/me/addresses/:addressId', deleteAddress);
-router.get('/me/orders', getOrderHistory);
+router.get('/orders', getOrderHistory);
+
 
 module.exports = router;

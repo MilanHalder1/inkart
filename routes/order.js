@@ -5,7 +5,7 @@ const { protect } = require('../middleware/Auth');
 const Order = require('../models/Order');
 const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
-
+const{getMyOrders}=require('../controllers/order')
 router.use(protect);
 
 router.get('/', catchAsync(async (req, res) => {
@@ -28,6 +28,7 @@ router.get('/:id', catchAsync(async (req, res, next) => {
   if (!order) return next(new AppError('Order not found.', 404));
   res.status(200).json({ success: true, data: { order } });
 }));
+
 
 
 module.exports = router;

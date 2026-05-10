@@ -2,7 +2,10 @@
 
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 const User = require('../models/User');
+
+const { sendEmail } = require('../utilities/email');
 const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
 const { createSendToken, signToken } = require('../utilities/Jwt');
@@ -77,4 +80,86 @@ createSendToken(user, 200, res);
 
 });
 
-module.exports = { register, login, logout, refreshToken, changePassword, authLimiter };
+
+
+
+const forgotPassword = catchAsync(async (req, res, next) => {
+  const { email } = req.body;
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return next(new AppError('User not found.', 404));
+  }
+
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  user.resetOtp = otp;
+  user.resetOtpExpiry = Date.now() + 10 * 60 * 1000; // 10 mins
+
+  await user.save({ validateBeforeSave: false });
+
+  await sendEmail({
+    to: user.email,
+    subject: 'Password Reset OTP',
+    html: `
+      <h2>Password Reset</h2>
+      <p>Your OTP is:</p>
+      <h1>${otp}</h1>
+      <p>Valid for 10 minutes.</p>
+    `,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'OTP sent to email.',
+  });
+});
+
+const verifyOtp = catchAsync(async (req, res, next) => {
+  const { email, otp } = req.body;
+
+  const user = await User.findOne({
+    email,
+    resetOtp: otp,
+    resetOtpExpiry: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError('Invalid or expired OTP.', 400));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'OTP verified.',
+  });
+});
+
+
+const resetPassword = catchAsync(async (req, res, next) => {
+  const { email, otp, password } = req.body;
+
+  const user = await User.findOne({
+    email,
+    resetOtp: otp,
+    resetOtpExpiry: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return next(new AppError('Invalid or expired OTP.', 400));
+  }
+
+  user.password = password;
+
+  user.resetOtp = undefined;
+  user.resetOtpExpiry = undefined;
+
+await user.save({ validateBeforeSave: false });
+  res.status(200).json({
+    success: true,
+    message: 'Password reset successful.',
+  });
+});
+
+module.exports = { register, login, logout, refreshToken, changePassword, authLimiter,forgotPassword ,verifyOtp,resetPassword};
