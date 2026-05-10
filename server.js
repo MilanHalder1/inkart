@@ -83,7 +83,7 @@ app.use(`${API}/admin`,adminUserRouter)
 app.use(`${API}/review`,userReview)
 app.use(`${API}/customization`, userCustomizationRoutes);
 
-// Admin routes
+// Admin routes API
 app.use(`${API}/admin/auth`, adminAuthRoutes);
 app.use(`${API}/admin/products`, adminProductRoutes);
 app.use(`${API}/admin/categories`, adminCategoryRoutes);
