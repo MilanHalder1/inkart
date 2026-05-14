@@ -258,8 +258,11 @@ try {
 
   console.log("updated  order ====>",updatedOrder)
   await sendOrderPlacedEmail(user, updatedOrder);
-  await sendInvoiceEmail(user, updatedOrder, upload.secure_url);
-
+await sendInvoiceEmail(
+  user,
+  updatedOrder,
+  buffer
+);
   console.log('➡️ Creating shipment');
 
   await attachShipmentToOrder(updatedOrder);

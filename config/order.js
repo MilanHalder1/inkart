@@ -1,35 +1,41 @@
-const { sendEmail } = require('../utilities/email');
+'use strict';
 
-exports.sendOrderPlacedEmail = async (user, order) => {
-  const html = `
-    <h2>Order Confirmed</h2>
-    <p>Hi ${user.name},</p>
-    <p>Your order <b>${order.orderNumber}</b> has been placed successfully.</p>
-    <p>Total: ₹${order.total}</p>
-  `;
+const nodemailer = require('nodemailer');
 
-  await sendEmail({
-    to: user.email,
-    subject: 'Order Placed Successfully',
+require('dotenv').config();
+
+
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com',
+
+  port: 587,
+
+  secure: false,
+
+  auth: {
+    user: process.env.EMAIL_USER,
+
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+
+exports.sendEmail = async ({
+  to,
+  subject,
+  html,
+  attachments = [],
+}) => {
+
+  await transporter.sendMail({
+    from: `"Inkart" <${process.env.EMAIL_USER}>`,
+
+    to,
+
+    subject,
+
     html,
-  });
-};
-exports.sendInvoiceEmail = async (user, order, invoiceUrl) => {
-  const html = `
-    <h2>Invoice</h2>
-    <p>Hi ${user.name},</p>
-    <p>Here is your invoice for order <b>${order.orderNumber}</b>.</p>
-  `;
 
-  await sendEmail({
-    to: user.email,
-    subject: 'Your Invoice',
-    html,
-    attachments: [
-      {
-        filename: `invoice-${order.orderNumber}.pdf`,
-        path: invoiceUrl, // ✅ Cloudinary URL
-      },
-    ],
+    attachments,
   });
 };
