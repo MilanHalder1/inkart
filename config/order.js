@@ -1,41 +1,61 @@
 'use strict';
 
-const nodemailer = require('nodemailer');
-
-require('dotenv').config();
+const { sendEmail } = require('../utilities/email');
 
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+// ✅ ORDER PLACED MAIL
+exports.sendOrderPlacedEmail = async (user, order) => {
 
-  port: 587,
+  await sendEmail({
+    to: user.email,
 
-  secure: false,
+    subject: `Order Placed - ${order.orderNumber}`,
 
-  auth: {
-    user: process.env.EMAIL_USER,
+    html: `
+      <h2>Order Placed Successfully 🎉</h2>
 
-    pass: process.env.EMAIL_PASS,
-  },
-});
+      <p>Hello ${user.name},</p>
+
+      <p>Your order <b>${order.orderNumber}</b> has been placed successfully.</p>
+
+      <p>Total Amount: ₹${order.total}</p>
+
+      <p>Thank you for shopping with us.</p>
+    `,
+  });
+};
 
 
-exports.sendEmail = async ({
-  to,
-  subject,
-  html,
-  attachments = [],
-}) => {
+// ✅ INVOICE MAIL
+exports.sendInvoiceEmail = async (
+  user,
+  order,
+  invoiceBuffer
+) => {
 
-  await transporter.sendMail({
-    from: `"Inkart" <${process.env.EMAIL_USER}>`,
+  await sendEmail({
+    to: user.email,
 
-    to,
+    subject: `Invoice - ${order.orderNumber}`,
 
-    subject,
+    html: `
+      <h2>Invoice Generated 🧾</h2>
 
-    html,
+      <p>Hello ${user.name},</p>
 
-    attachments,
+      <p>Your invoice for order <b>${order.orderNumber}</b> is attached below.</p>
+
+      <p>Thank you for shopping with us.</p>
+    `,
+
+    attachments: [
+      {
+        filename: `invoice-${order.orderNumber}.pdf`,
+
+        content: invoiceBuffer,
+
+        contentType: 'application/pdf',
+      },
+    ],
   });
 };
