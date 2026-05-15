@@ -11,7 +11,7 @@ const getToken = async () => {
   try {
 
     if (token) return token;
-console.log('process.env.SHIPROCKET_BASE_URL',process.env.SHIPROCKET_BASE_URL)
+    console.log('process.env.SHIPROCKET_BASE_URL', process.env.SHIPROCKET_BASE_URL)
     const res = await axios.post(
       `${process.env.SHIPROCKET_BASE_URL}/auth/login`,
       {
@@ -22,7 +22,7 @@ console.log('process.env.SHIPROCKET_BASE_URL',process.env.SHIPROCKET_BASE_URL)
     );
 
     token = res.data.token;
-
+ 
     console.log('✅ Shiprocket Token Generated');
 
     return token;
@@ -45,7 +45,7 @@ const createShipment = async (order) => {
   try {
 
     const authToken = await getToken();
-console.log('authToken',authToken)
+    console.log('authToken', authToken)
     // ✅ Populate required data
     await order.populate('user', 'name email');
 
@@ -65,7 +65,7 @@ console.log('authToken',authToken)
       billing_last_name: '',
 
       billing_address:
-        order.shippingAddress.line1,
+        order.shippingAddress.line1 || " Default address",
 
       billing_address_2:
         order.shippingAddress.line2 || '',
