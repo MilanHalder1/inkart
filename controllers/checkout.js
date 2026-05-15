@@ -327,6 +327,7 @@ const getOrderDetails = catchAsync(async (req, res, next) => {
 
 const attachShipmentToOrder = async (order) => {
   try {
+    console.log("shipment order function")
     if (order.shipment?.awb) return order; // ✅ already exists
 
     const shipment = await createShipment(order);

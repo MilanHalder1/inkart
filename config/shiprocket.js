@@ -4,79 +4,180 @@ const axios = require('axios');
 
 let token = null;
 
-// 🔑 Get Token
+
+// 🔑 Generate Token
 const getToken = async () => {
-  if (token) return token;
 
-  const res = await axios.post(
-    `${process.env.SHIPROCKET_BASE_URL}/auth/login`,
-    {
-      email: process.env.SHIPROCKET_EMAIL,
-      password: process.env.SHIPROCKET_PASSWORD,
-    }
-  );
+  try {
 
-  token = res.data.token;
-  return token;
+    if (token) return token;
+console.log('process.env.SHIPROCKET_BASE_URL',process.env.SHIPROCKET_BASE_URL)
+    const res = await axios.post(
+      `${process.env.SHIPROCKET_BASE_URL}/auth/login`,
+      {
+        email: process.env.SHIPROCKET_EMAIL,
+
+        password: process.env.SHIPROCKET_PASSWORD,
+      }
+    );
+
+    token = res.data.token;
+
+    console.log('✅ Shiprocket Token Generated');
+
+    return token;
+
+  } catch (err) {
+
+    console.error(
+      '❌ Shiprocket Auth Error:',
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
 };
 
 
-// 🚚 Create Shipment
+// 🚚 CREATE SHIPMENT
 const createShipment = async (order) => {
-  const authToken = await getToken();
 
-  const res = await axios.post(
-    `${process.env.SHIPROCKET_BASE_URL}/orders/create/adhoc`,
-    {
-      order_id: order._id.toString(),
+  try {
+
+    const authToken = await getToken();
+console.log('authToken',authToken)
+    // ✅ Populate required data
+    await order.populate('user', 'name email');
+
+    await order.populate('items.product', 'name');
+
+    const payload = {
+
+      order_id: order.orderNumber,
+
       order_date: new Date(),
-      pickup_location: "Primary",
-      billing_customer_name: order.shippingAddress.name,
-      billing_address: order.shippingAddress.address,
-      billing_city: order.shippingAddress.city,
-      billing_pincode: order.shippingAddress.pincode,
-      billing_state: order.shippingAddress.state,
-      billing_country: "India",
-      billing_email: order.user.email,
-      billing_phone: order.shippingAddress.phone,
+
+      pickup_location: 'Primary', // MUST EXIST IN SHIPROCKET
+
+      billing_customer_name:
+        order.shippingAddress.fullName,
+
+      billing_last_name: '',
+
+      billing_address:
+        order.shippingAddress.line1,
+
+      billing_address_2:
+        order.shippingAddress.line2 || '',
+
+      billing_city:
+        order.shippingAddress.city,
+
+      billing_pincode:
+        order.shippingAddress.pincode,
+
+      billing_state:
+        order.shippingAddress.state,
+
+      billing_country:
+        order.shippingAddress.country || 'India',
+
+      billing_email:
+        order.user.email,
+
+      billing_phone:
+        order.shippingAddress.phone,
+
+      shipping_is_billing: true,
+
       order_items: order.items.map(item => ({
-        name: item.product.name,
-        sku: item.product._id.toString(),
+
+        name: item.name,
+
+        sku: item.product?._id?.toString() || 'SKU',
+
         units: item.quantity,
+
         selling_price: item.price,
       })),
-      payment_method: order.paymentMethod === 'cod' ? "COD" : "Prepaid",
-      sub_total: order.totalPrice,
+
+      payment_method:
+        order.paymentMethod === 'cod'
+          ? 'COD'
+          : 'Prepaid',
+
+      sub_total: order.total,
+
       length: 10,
       breadth: 10,
       height: 10,
       weight: 0.5,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
-    }
-  );
+    };
 
-  return res.data;
+    console.log(
+      '📦 Shiprocket Payload:',
+      JSON.stringify(payload, null, 2)
+    );
+
+    const res = await axios.post(
+      `${process.env.SHIPROCKET_BASE_URL}/orders/create/adhoc`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log('✅ Shipment Created');
+
+    return res.data;
+
+  } catch (err) {
+
+    console.error(
+      '❌ Shiprocket Error:',
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
 };
 
 
-// 📦 Track Shipment
+// 📦 TRACK SHIPMENT
 const trackShipment = async (awb) => {
-  const authToken = await getToken();
 
-  const res = await axios.get(
-    `${process.env.SHIPROCKET_BASE_URL}/courier/track/awb/${awb}`,
-    {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
-    }
-  );
+  try {
 
-  return res.data;
+    const authToken = await getToken();
+
+    const res = await axios.get(
+      `${process.env.SHIPROCKET_BASE_URL}/courier/track/awb/${awb}`,
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      }
+    );
+
+    return res.data;
+
+  } catch (err) {
+
+    console.error(
+      '❌ Track Shipment Error:',
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
 };
 
-module.exports = { createShipment, trackShipment };
+
+module.exports = {
+  createShipment,
+  trackShipment,
+};
