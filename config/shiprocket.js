@@ -132,7 +132,7 @@ const createShipment = async (order) => {
     );
 
     console.log('✅ Shipment Created');
-    console.log("shipment data", res.data)
+    console.log("shipment data", res.data,res?.data?.data)
     return res.data;
 
   } catch (err) {
@@ -151,7 +151,7 @@ const createShipment = async (order) => {
 const trackShipment = async (awb) => {
 
   try {
-
+console.log('track shipment')
     const authToken = await getToken();
 
     const res = await axios.get(
@@ -162,6 +162,7 @@ const trackShipment = async (awb) => {
         },
       }
     );
+    console.log('res.data',res.data)
 
     return res.data;
 

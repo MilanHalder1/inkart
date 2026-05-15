@@ -331,7 +331,7 @@ const attachShipmentToOrder = async (order) => {
     if (order.shipment?.awb) return order; // ✅ already exists
 
     const shipment = await createShipment(order);
-
+console.log("shipment  checkoout data",shipment)
     order.shipment = {
       awb: shipment.awb_code,
       courier: shipment.courier_name,
