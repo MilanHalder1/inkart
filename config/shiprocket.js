@@ -22,7 +22,7 @@ const getToken = async () => {
     );
 
     token = res.data.token;
- 
+
     console.log('✅ Shiprocket Token Generated');
 
     return token;
@@ -132,7 +132,7 @@ const createShipment = async (order) => {
     );
 
     console.log('✅ Shipment Created');
-
+    console.log("shipment data", res.data)
     return res.data;
 
   } catch (err) {
