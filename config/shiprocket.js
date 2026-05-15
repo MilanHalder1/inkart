@@ -57,7 +57,7 @@ const createShipment = async (order) => {
 
       order_date: new Date(),
 
-      pickup_location: 'Primary', // MUST EXIST IN SHIPROCKET
+      pickup_location: 'Office', // MUST EXIST IN SHIPROCKET
 
       billing_customer_name:
         order.shippingAddress.fullName,
