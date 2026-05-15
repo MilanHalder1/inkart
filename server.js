@@ -31,6 +31,7 @@ const webhookRoutes=require('./routes/webhook')
 const adminOrderRoutes = require('./routes/admin.order');
 const userReview=require('./routes/review');
 const adminAnalyticsRoutes = require('./routes/admin.analytics');
+const shipmentRoutes = require('./routes/shipment');
 const app = express();
 
 connectDB();
@@ -91,7 +92,7 @@ app.use(`${API}/admin/products`, adminProductRoutes);
 app.use(`${API}/admin/categories`, adminCategoryRoutes);
 app.use(`${API}/webhooks`,webhookRoutes)
 app.use(`${API}/admin/orders`, adminOrderRoutes);
-
+app.use(`${API}/shipments`, shipmentRoutes);
 // app.use(`${API}/admin/uploads`, adminUploadRoutes);
  
 // // Super Admin routes
