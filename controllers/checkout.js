@@ -98,6 +98,9 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
     receipt: `rcpt_${Date.now()}`,
     notes: { userId: req.user.id.toString() },
   });
+ const isCustomizedOrder = cart.items.some(
+  item => item.customizationId
+);
 
   // Persist a pending order
   const order = await Order.create({
@@ -110,12 +113,14 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
       price: i.price,
       quantity: i.quantity,
       customizationId: i.customizationId,
+      
     })),
     shippingAddress: address.toObject(),
     subtotal,
     shipmentCutoffTime,
     couponDiscount,
     total,
+    isCustomizedOrder,
     coupon: cart.coupon?._id || null,
     couponCode: cart.coupon?.code || null,
     paymentMethod: 'razorpay',

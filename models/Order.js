@@ -85,6 +85,10 @@ const orderSchema = new mongoose.Schema({
   deliveredAt: Date,
   cancelReason: String,
   notes: String,
+  isCustomizedOrder: {
+  type: Boolean,
+  default: false,
+},
 }, {
   timestamps: true,
 });

@@ -172,40 +172,40 @@ const generateInvoice = async (order) => {
 
     let grandTotal = 0;
 
-   order.items.forEach((item, index) => {
+    order.items.forEach((item, index) => {
 
-  const total = item.price * item.quantity;
+      const total = item.price * item.quantity;
 
-  grandTotal += total;
+      grandTotal += total;
 
-  doc
-    .fontSize(10)
-    .fillColor('black')
+      doc
+        .fontSize(10)
+        .fillColor('black')
 
-    .text(index + 1, 50, tableTop)
+        .text(index + 1, 50, tableTop)
 
-    .text(
-      item.name || 'Product',
-      80,
-      tableTop,
-      {
-        width: 180,
-      }
-    )
+        .text(
+          item.name || 'Product',
+          80,
+          tableTop,
+          {
+            width: 180,
+          }
+        )
 
-    .text(item.quantity, 305, tableTop)
+        .text(item.quantity, 305, tableTop)
 
-    .text(`₹${item.price}`, 350, tableTop)
+        .text(`₹${item.price}`, 350, tableTop)
 
-    .text(`₹${total}`, 470, tableTop);
+        .text(`₹${total}`, 470, tableTop);
 
-  tableTop += 28;
+      tableTop += 28;
 
-  doc
-    .moveTo(40, tableTop - 5)
-    .lineTo(550, tableTop - 5)
-    .stroke(lightGray);
-});
+      doc
+        .moveTo(40, tableTop - 5)
+        .lineTo(550, tableTop - 5)
+        .stroke(lightGray);
+    });
 
     // =====================================================
     // PAYMENT + SHIPPING + SUMMARY
@@ -309,7 +309,7 @@ const generateInvoice = async (order) => {
       .fillColor(primary)
       .text(`₹${finalTotal}`, 480, tableTop + 110);
 
-   
+
     doc
       .font('Helvetica')
       .fontSize(9)
@@ -337,7 +337,7 @@ const generateInvoice = async (order) => {
         }
       );
 
-   
+
     doc.end();
   });
 };

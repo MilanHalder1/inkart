@@ -115,8 +115,30 @@ const markCODAsPaid = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'COD marked as paid',
+    message: 'COD marked as paid', 
   });
 }); //code 
 
-module.exports = { getAllOrders, getOrder, updateOrderStatus, cancelOrder,markCODAsPaid };
+const getCustomizedOrders = catchAsync(async (req, res) => {
+
+  const orders = await Order.find({
+    isCustomizedOrder: true,
+  })
+
+    .populate('user', 'name email')
+
+    .populate('items.product', 'name images')
+
+    .populate('items.customization');
+
+  res.status(200).json({
+    success: true,
+
+    results: orders.length,
+
+    data: {
+      orders,
+    },
+  });
+});
+module.exports = { getAllOrders, getOrder, updateOrderStatus, cancelOrder,markCODAsPaid,getCustomizedOrders };
