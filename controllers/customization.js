@@ -54,7 +54,11 @@ const saveDesign = catchAsync(async (req, res, next) => {
       canvasHeight,
       status: 'saved',
     },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+{
+  upsert: true,
+  returnDocument: 'after',
+  setDefaultsOnInsert: true,
+}
   );
 
   res.status(200).json({ success: true, data: { customization } });
@@ -78,7 +82,7 @@ const uploadPreviewImage = [
 const getDesign = catchAsync(async (req, res, next) => {
   const customization = await Customization.findOne({
     _id: req.params.customizationId,
-    user: req.user.id,
+    user: req.user.id,  
   }).populate('product', 'name images printableArea');
   if (!customization) return next(new AppError('Design not found.', 404));
   res.status(200).json({ success: true, data: { customization } });
