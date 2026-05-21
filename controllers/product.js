@@ -36,10 +36,10 @@ const getAllProducts = catchAsync(async (req, res) => {
   }
 
   // Full-text search
-  let baseQuery = Product.find(queryObj).populate('category', 'name slug');
+  let baseQuery = Product.find(queryObj).populate('category', 'name slug estimatedDeliveryDays');
   if (req.query.search) {
     baseQuery = Product.find({ ...queryObj, $text: { $search: req.query.search } })
-      .populate('category', 'name slug');
+      .populate('category', 'name slug estimatedDeliveryDays',);
   }
 
   // Sort
@@ -75,7 +75,7 @@ const getProduct = catchAsync(async (req, res, next) => {
   const product = await Product.findOne({
     $or: [{ _id: req.params.id }, { slug: req.params.id }],
     isActive: true,
-  }).populate('category', 'name slug').select('-__v');
+  }).populate('category', 'name slug estimatedDeliveryDays').select('-__v');
 
   if (!product) return next(new AppError('Product not found.', 404));
 

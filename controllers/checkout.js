@@ -25,6 +25,7 @@ const applyCoupon = catchAsync(async (req, res, next) => {
   if (!coupon) return next(new AppError('Invalid coupon code.', 404));
 
   const subtotal = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
+
   const validity = coupon.isValid(req.user.id, subtotal);
   if (!validity.valid) return next(new AppError(validity.message, 400));
 
@@ -81,6 +82,14 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
   const couponDiscount = cart.couponDiscount || 0;
   const total = Math.max(0, subtotal - couponDiscount);
   const totalInPaise = Math.round(total * 100);
+  const maxDeliveryDays = Math.max(
+    ...cart.items.map(
+      i => i.product.category?.estimatedDeliveryDays || 3
+    )
+  );
+  const shipmentCutoffTime = new Date(
+    Date.now() + 2 * 60 * 60 * 1000
+  );
 
   // Create Razorpay order
   const rzpOrder = await razorpay.orders.create({
@@ -104,6 +113,7 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
     })),
     shippingAddress: address.toObject(),
     subtotal,
+    shipmentCutoffTime,
     couponDiscount,
     total,
     coupon: cart.coupon?._id || null,
@@ -123,8 +133,10 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
       orderNumber: order.orderNumber,
       razorpayOrderId: rzpOrder.id,
       amount: totalInPaise,
+      
       currency: 'INR',
       keyId: process.env.RAZORPAY_KEY_ID,
+      estimatedDeliveryDays: maxDeliveryDays,
     },
   });
 });
@@ -232,46 +244,46 @@ const verifyPayment = catchAsync(async (req, res, next) => {
 
   // 🚀 POST-TRANSACTION (NO DB LOCKS HERE)
 
-try {
-  const updatedOrder = await Order.findById(order._id);
-  const user = await User.findById(order.user);
+  try {
+    const updatedOrder = await Order.findById(order._id);
+    const user = await User.findById(order.user);
 
-  console.log('➡️ Generating invoice');
+    console.log('➡️ Generating invoice');
 
-  // 🧾 Generate buffer
-  const buffer = await generateInvoice(updatedOrder);
+    // 🧾 Generate buffer
+    const buffer = await generateInvoice(updatedOrder);
 
-  console.log('➡️ Uploading invoice');
+    console.log('➡️ Uploading invoice');
 
-  // ☁️ Upload
-  const upload = await uploadInvoiceToCloudinary(
-    buffer,
-    updatedOrder.orderNumber
-  );
+    // ☁️ Upload
+    const upload = await uploadInvoiceToCloudinary(
+      buffer,
+      updatedOrder.orderNumber
+    );
 
-  console.log('➡️ Saving invoice URL');
+    console.log('➡️ Saving invoice URL');
 
-  updatedOrder.invoiceUrl = upload.secure_url;
-  await updatedOrder.save();
+    updatedOrder.invoiceUrl = upload.secure_url;
+    await updatedOrder.save();
 
-  console.log('➡️ Sending emails');
+    console.log('➡️ Sending emails');
 
-  console.log("updated  order ====>",updatedOrder)
-  await sendOrderPlacedEmail(user, updatedOrder);
-await sendInvoiceEmail(
-  user,
-  updatedOrder,
-  buffer
-);
-  console.log('➡️ Creating shipment');
+    console.log("updated  order ====>", updatedOrder)
+    await sendOrderPlacedEmail(user, updatedOrder);
+    await sendInvoiceEmail(
+      user,
+      updatedOrder,
+      buffer
+    );
+    console.log('➡️ Creating shipment');
 
-  await attachShipmentToOrder(updatedOrder);
+    await attachShipmentToOrder(updatedOrder);
 
-  console.log('✅ All done');
+    console.log('✅ All done');
 
-} catch (err) {
-  console.error('❌ Post-payment error:', err);
-}
+  } catch (err) {
+    console.error('❌ Post-payment error:', err);
+  }
 
   return res.status(200).json({
     success: true,
@@ -318,7 +330,12 @@ const getOrderDetails = catchAsync(async (req, res, next) => {
   const order = await Order.findOne({ _id: req.params.orderId, user: req.user.id })
     .populate('items.product', 'name images slug');
   if (!order) return next(new AppError('Order not found.', 404));
-  res.status(200).json({ success: true, data: { order } });
+  const isCancellable =
+    order.shipmentCutoffTime &&
+    new Date() < order.shipmentCutoffTime &&
+    !['shipped', 'delivered', 'cancelled']
+      .includes(order.orderStatus);
+  res.status(200).json({ success: true, data: { order,isCancellable } });
 });
 
 //shipments
@@ -331,7 +348,7 @@ const attachShipmentToOrder = async (order) => {
     if (order.shipment?.awb) return order; // ✅ already exists
 
     const shipment = await createShipment(order);
-console.log("shipment  checkoout data",shipment)
+    console.log("shipment  checkoout data", shipment)
     order.shipment = {
       awb: shipment.awb_code,
       courier: shipment.courier_name,

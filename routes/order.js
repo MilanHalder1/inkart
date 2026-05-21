@@ -1,13 +1,18 @@
 'use strict';
 
 const router = require('express').Router();
+const { cancelMyOrder } = require('../controllers/order');
 const { protect } = require('../middleware/Auth');
 const Order = require('../models/Order');
 const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
-const{getMyOrders}=require('../controllers/order')
-router.use(protect);
 
+router.use(protect);
+router.post(
+  '/:id/cancel',
+  protect,
+  cancelMyOrder
+);
 router.get('/', catchAsync(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
   const limit = Math.min(50, parseInt(req.query.limit, 10) || 10);
@@ -28,7 +33,7 @@ router.get('/:id', catchAsync(async (req, res, next) => {
   if (!order) return next(new AppError('Order not found.', 404));
   res.status(200).json({ success: true, data: { order } });
 }));
-
+//  router.post(':id/cancel',)
 
 
 module.exports = router;

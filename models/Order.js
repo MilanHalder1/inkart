@@ -63,8 +63,8 @@ const orderSchema = new mongoose.Schema({
     note: String,
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   }],
-invoiceUrl: String,
-invoiceNumber: String,
+  invoiceUrl: String,
+  invoiceNumber: String,
   shipment: {
     awb: String,                 // Shiprocket AWB
     courier: String,             // Courier name (Delhivery, Bluedart)
@@ -72,6 +72,15 @@ invoiceNumber: String,
     trackingUrl: String,         // Tracking link
     shiprocketOrderId: String,   // Shiprocket order id
     shipmentId: String           // Shipment id
+  },
+  cancelReason: String,
+  cancelledAt: Date,
+
+  shipmentCutoffTime: Date,
+
+  isCancellable: {
+    type: Boolean,
+    default: true,
   },
   deliveredAt: Date,
   cancelReason: String,

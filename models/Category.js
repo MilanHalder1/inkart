@@ -11,6 +11,11 @@ const categorySchema = new mongoose.Schema({
     url: String,
     publicId: String,
   },
+  estimatedDeliveryDays: {
+  type: Number,
+  default: 3,
+  min: 1,
+},
   parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   isActive: { type: Boolean, default: true, index: true },
   sortOrder: { type: Number, default: 0 },
