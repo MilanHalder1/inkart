@@ -40,8 +40,84 @@ const login = catchAsync(async (req, res, next) => {
 
   if (!user.isActive) return next(new AppError('Account deactivated. Contact support.', 401));
 
-  user.lastLogin = Date.now();
+    // ✅ GENERATE OTP
+
+  const otp = Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
+
+  // ✅ SAVE OTP
+
+  user.loginOtp = otp;
+
+  user.loginOtpExpires = Date.now() + 5 * 60 * 1000;
+
   await user.save({ validateBeforeSave: false });
+
+  // ✅ SEND EMAIL
+
+  await sendEmail({
+    to: user.email,
+
+    subject: 'Login OTP',
+
+    html: `
+      <h2>Your Login OTP</h2>
+
+      <p>OTP: <b>${otp}</b></p>
+
+      <p>This OTP expires in 5 minutes.</p>
+    `,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: 'OTP sent to email',
+  });
+});
+const verifyLoginOtp = catchAsync(async (req, res, next) => {
+
+  const { email, otp } = req.body;
+
+  if (!email || !otp) {
+    return next(
+      new AppError('Email and OTP required', 400)
+    );
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    return next(
+      new AppError('User not found', 404)
+    );
+  }
+
+  // ✅ INVALID OTP
+
+  if (user.loginOtp !== otp) {
+    return next(
+      new AppError('Invalid OTP', 400)
+    );
+  }
+
+  // ✅ OTP EXPIRED
+
+  if (user.loginOtpExpires < Date.now()) {
+    return next(
+      new AppError('OTP expired', 400)
+    );
+  }
+
+  // ✅ CLEAR OTP
+
+  user.loginOtp = undefined;
+
+  user.loginOtpExpires = undefined;
+
+  await user.save({ validateBeforeSave: false });
+
+  // ✅ LOGIN SUCCESS
 
   createSendToken(user, 200, res);
 });
@@ -162,4 +238,4 @@ await user.save({ validateBeforeSave: false });
   });
 });
 
-module.exports = { register, login, logout, refreshToken, changePassword, authLimiter,forgotPassword ,verifyOtp,resetPassword};
+module.exports = { register, login, logout, refreshToken, changePassword,verifyLoginOtp, authLimiter,forgotPassword ,verifyOtp,resetPassword};

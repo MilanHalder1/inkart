@@ -3,7 +3,7 @@
 const express = require('express');
 const router=express.Router();
 const { body } = require('express-validator');
-const { register, login, logout, refreshToken, changePassword, authLimiter,forgotPassword,verifyOtp,resetPassword } = require('../controllers/auth');
+const { register, login, logout, refreshToken, changePassword,verifyLoginOtp, authLimiter,forgotPassword,verifyOtp,resetPassword } = require('../controllers/auth');
 const { protect } = require('../middleware/Auth');
 const validate = require('../middleware/Validate'); 
 const { getMyOrders } = require('../controllers/order');
@@ -18,6 +18,7 @@ router.post('/login', authLimiter, validate([
   body('email').isEmail().withMessage('Valid email required'),
   body('password').notEmpty().withMessage('Password required'),
 ]), login);
+router.post('/verify-login-otp', verifyLoginOtp);
 
 router.post('/logout', protect, logout);
 router.post('/refresh-token', refreshToken);

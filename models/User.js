@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema({
     unique: true,
     lowercase: true,
     trim: true,
-    
+
   },
   phone: { type: String, trim: true },
   password: { type: String, required: true, minlength: 6, select: false },
@@ -45,13 +45,16 @@ const userSchema = new mongoose.Schema({
   passwordResetExpires: { type: Date, select: false },
   refreshToken: { type: String, select: false },
   resetOtp: {
-  type: String,
-},
+    type: String,
+  },
 
-resetOtpExpiry: {
-  type: Date,
-},  
+  resetOtpExpiry: {
+    type: Date,
+  },
   lastLogin: Date,
+  loginOtp: String,
+
+  loginOtpExpires: Date,
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
