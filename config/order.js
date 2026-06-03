@@ -59,3 +59,44 @@ exports.sendInvoiceEmail = async (
     ],
   });
 };
+
+exports.sendOrderApprovedEmail = async (user, order) => {
+  await sendEmail({
+    to: user.email,
+
+    subject: `Order Approved - ${order.orderNumber}`,
+
+    html: `
+      <div style="font-family: Arial, sans-serif;">
+        <h2>Order Approved ✅</h2>
+
+        <p>Hello ${user.name || 'Customer'},</p>
+
+        <p>Your order <strong>${order.orderNumber}</strong> has been approved by our team.</p>
+
+        <p>We have started processing your order and it will be shipped shortly.</p>
+
+        <br/>
+
+        <p>
+          <strong>Order Number:</strong>
+          ${order.orderNumber}
+        </p>
+
+        <p>
+          <strong>Status:</strong>
+          Approved
+        </p>
+
+        <br/>
+
+        <p>Thank you for choosing us.</p>
+
+        <p>
+          Regards,<br/>
+          COLOURSTREAK INDIA PRIVATE LIMITED
+        </p>
+      </div>
+    `,
+  });
+};

@@ -1,7 +1,7 @@
 'use strict';
 
 const router = require('express').Router();
-const { cancelMyOrder } = require('../controllers/order');
+const { cancelMyOrder, hideOrderFromHistory } = require('../controllers/order');
 const { protect } = require('../middleware/Auth');
 const Order = require('../models/Order');
 const AppError = require('../utilities/AppError');
@@ -35,5 +35,5 @@ router.get('/:id', catchAsync(async (req, res, next) => {
 }));
 //  router.post(':id/cancel',)
 
-
+router.delete('/:orderId/history',protect,hideOrderFromHistory)
 module.exports = router;

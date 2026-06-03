@@ -17,6 +17,7 @@ const getMyOrders = catchAsync(async (req, res) => {
   });
 });
 
+
 const cancelMyOrder = catchAsync(async (req, res, next) => {
 
   const { reason } = req.body;
@@ -124,4 +125,26 @@ console.log('order',order)
     data: { order },
   });
 });
-module.exports={getMyOrders,cancelMyOrder}
+const hideOrderFromHistory = catchAsync(async (req, res, next) => {
+
+  const order = await Order.findOne({
+    _id: req.params.orderId,
+    user: req.user.id
+  });
+
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+
+  if (!order.hiddenByUsers.includes(req.user.id)) {
+    order.hiddenByUsers.push(req.user.id);
+  }
+
+  await order.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Order removed from history'
+  });
+});
+module.exports={getMyOrders,cancelMyOrder,hideOrderFromHistory}

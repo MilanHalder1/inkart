@@ -3,8 +3,8 @@
 const Order = require('../models/Order');
 const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
-const User=require('../models/User')
-
+const User = require('../models/User');
+const { sendOrderApprovedEmail } = require('../config/order');
 const VALID_TRANSITIONS = {
   placed: ['confirmed', 'cancelled'],
   confirmed: ['processing', 'cancelled'],
@@ -115,7 +115,7 @@ const markCODAsPaid = catchAsync(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    message: 'COD marked as paid', 
+    message: 'COD marked as paid',
   });
 }); //code 
 
@@ -141,4 +141,69 @@ const getCustomizedOrders = catchAsync(async (req, res) => {
     },
   });
 });
-module.exports = { getAllOrders, getOrder, updateOrderStatus, cancelOrder,markCODAsPaid,getCustomizedOrders };
+
+const setDeliveryEstimate = catchAsync(async (req, res, next) => {
+  const { estimatedDeliveryDate, deliveryNote } = req.body;
+
+  const order = await Order.findById(req.params.id);
+
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+
+  order.estimatedDeliveryDate = estimatedDeliveryDate;
+  order.deliveryNote = deliveryNote;
+
+  await order.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'Delivery estimate updated',
+    data: { order }
+  });
+});
+
+const approveOrder = catchAsync(async (req, res, next) => {
+
+  const order = await Order.findById(req.params.id);
+
+  if (!order) {
+    return next(new AppError('Order not found', 404));
+  }
+
+  if (order.approvedByAdmin) {
+    return next(new AppError('Already approved', 400));
+  }
+
+  order.approvedByAdmin = true;
+  order.approvedAt = new Date();
+
+  order.isCancellable = false;
+
+  await order.save();
+
+  const user = await User.findById(order.user);
+
+  await sendOrderApprovedEmail(user, order);
+
+  // await attachShipmentToOrder(order);
+
+  res.status(200).json({
+    success: true,
+    message: 'Order approved'
+  });
+});
+const resendOrderConfirmation = catchAsync(async (req, res, next) => {
+
+  const order = await Order.findById(req.params.id);
+
+  const user = await User.findById(order.user);
+
+  await sendOrderApprovedEmail(user, order);
+
+  res.status(200).json({
+    success: true,
+    message: 'Email resent'
+  });
+});
+module.exports = { getAllOrders, getOrder, updateOrderStatus,setDeliveryEstimate, cancelOrder, markCODAsPaid, getCustomizedOrders ,approveOrder,resendOrderConfirmation};

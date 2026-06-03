@@ -82,13 +82,26 @@ const orderSchema = new mongoose.Schema({
     type: Boolean,
     default: true,
   },
+  estimatedDeliveryDate: Date,
+
+  deliveryNote: String,
+  approvedByAdmin: {
+    type: Boolean,
+    default: false,
+  },
+
+  hiddenByUsers: [{
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User'
+}],
+  approvedAt: Date,
   deliveredAt: Date,
   cancelReason: String,
   notes: String,
   isCustomizedOrder: {
-  type: Boolean,
-  default: false,
-},
+    type: Boolean,
+    default: false,
+  },
 }, {
   timestamps: true,
 });
