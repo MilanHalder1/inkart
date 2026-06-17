@@ -26,9 +26,28 @@ const getAllProducts = catchAsync(async (req, res) => {
 });
 
 const createProduct = catchAsync(async (req, res, next) => {
-  const images = req.files?.map((f) => ({ url: f.path, publicId: f.filename })) || [];
-  const product = await Product.create({ ...req.body, images, createdBy: req.user.id });
-  res.status(201).json({ success: true, data: { product } });
+
+  const images = req.files?.map((f) => ({
+    url: f.path,
+    publicId: f.filename,
+  })) || [];
+
+  // Parse quantity pricing if sent via form-data
+  if (req.body.quantityPricing) {
+    req.body.quantityPricing =
+      JSON.parse(req.body.quantityPricing);
+  }
+
+  const product = await Product.create({
+    ...req.body,
+    images,
+    createdBy: req.user.id,
+  });
+
+  res.status(201).json({
+    success: true,
+    data: { product },
+  });
 });
 
 const getProduct = catchAsync(async (req, res, next) => {
@@ -38,17 +57,83 @@ const getProduct = catchAsync(async (req, res, next) => {
 });
 
 const updateProduct = catchAsync(async (req, res, next) => {
-  const product = await Product.findById(req.params.id);
-  if (!product) return next(new AppError('Product not found.', 404));
 
-  // Append new images if uploaded
-  if (req.files?.length) {
-    const newImages = req.files.map((f) => ({ url: f.path, publicId: f.filename }));
-    req.body.images = [...(product.images || []), ...newImages];
+  const product = await Product.findById(req.params.id);
+
+  if (!product) {
+    return next(
+      new AppError('Product not found.', 404)
+    );
   }
 
-  const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
-  res.status(200).json({ success: true, data: { product: updated } });
+  // ==========================================
+  // Parse JSON fields from form-data
+  // ==========================================
+
+  try {
+    if (req.body.quantityPricing) {
+      req.body.quantityPricing = JSON.parse(
+        req.body.quantityPricing
+      );
+    }
+
+    if (req.body.variants) {
+      req.body.variants = JSON.parse(
+        req.body.variants
+      );
+    }
+
+    if (req.body.specifications) {
+      req.body.specifications = JSON.parse(
+        req.body.specifications
+      );
+    }
+
+  } catch (err) {
+    return next(
+      new AppError(
+        'Invalid JSON in request body.',
+        400
+      )
+    );
+  }
+
+  // ==========================================
+  // Append new uploaded images
+  // ==========================================
+
+  if (req.files?.length) {
+
+    const newImages = req.files.map((f) => ({
+      url: f.path,
+      publicId: f.filename,
+    }));
+
+    req.body.images = [
+      ...(product.images || []),
+      ...newImages,
+    ];
+  }
+
+  // ==========================================
+  // Update Product
+  // ==========================================
+
+  const updated = await Product.findByIdAndUpdate(
+    req.params.id,
+    req.body,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
+
+  res.status(200).json({
+    success: true,
+    data: {
+      product: updated,
+    },
+  });
 });
 
 const deleteProduct = catchAsync(async (req, res, next) => {

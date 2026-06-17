@@ -4,11 +4,11 @@ const mongoose = require('mongoose');
 const slugify = require('slugify');
 
 const variantSchema = new mongoose.Schema({
-  name: { type: String, required: true },      
-  value: { type: String, required: true },     
-  priceModifier: { type: Number, default: 0 }, 
+  name: { type: String, required: true },
+  value: { type: String, required: true },
+  priceModifier: { type: Number, default: 0 },
   sku: { type: String },
-  
+
   stock: { type: Number, default: 0, min: 0 },
   images: [{ url: String, publicId: String }],
 }, { _id: true });
@@ -27,9 +27,6 @@ const productSchema = new mongoose.Schema({
     index: true,
   },
 
-  // ─── Product Type ──────────────────────────────────────────────
-  // 'stocked'    → has a physical stock count; can't order when 0
-  // 'on_demand'  → always orderable, no stock management
   productType: {
     type: String,
     enum: ['stocked', 'on_demand'],
@@ -37,7 +34,21 @@ const productSchema = new mongoose.Schema({
     default: 'stocked',
     index: true,
   },
+  quantityPricing: [
+    {
+      minQty: {
+        type: Number,
+        required: true,
+      },
 
+      pricePerUnit: {
+        type: Number,
+        required: true,
+      },
+
+      label: String,
+    },
+  ],
   // Only relevant for productType === 'stocked'
   stock: { type: Number, default: 0, min: 0 },
   lowStockThreshold: { type: Number, default: 5 },

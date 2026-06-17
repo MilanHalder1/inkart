@@ -4,6 +4,8 @@ const Cart = require('../models/Cart');
 const Product = require('../models/Product');
 const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
+const { getUnitPrice } = require('../utilities/pricing');
+
 
 // ✅ Get or Create Cart
 const getOrCreateCart = async (userId) => {
@@ -35,12 +37,7 @@ const addToCart = catchAsync(async (req, res, next) => {
   }
 
   // 🔍 Base price
-  const basePrice =
-    product.discountedPrice && product.discountedPrice < product.basePrice
-      ? product.discountedPrice
-      : product.basePrice;
-
-  let finalPrice = basePrice;
+  let finalPrice = getUnitPrice(product, quantity);
 
   // 🔍 Variant handling
   let variant = null;
@@ -83,8 +80,19 @@ const addToCart = catchAsync(async (req, res, next) => {
     }
 
     existingItem.quantity = newQuantity;
-    existingItem.price = finalPrice;
-  } 
+
+    let updatedPrice = getUnitPrice(
+      product,
+      newQuantity
+    );
+
+    if (variant) {
+      updatedPrice +=
+        variant.priceModifier || 0;
+    }
+
+    existingItem.price = updatedPrice;
+  }
   // ➕ NEW ITEM
   else {
     if (product.productType === 'stocked') {
