@@ -6,6 +6,7 @@ const { protect } = require('../middleware/Auth');
 
 const {
   trackMyOrder,
+  checkDelivery,
 } = require('../controllers/shipment');
 
 router.get(
@@ -14,4 +15,5 @@ router.get(
   trackMyOrder
 );
 
+router.post('/check-delivery',checkDelivery)
 module.exports = router;
