@@ -5,6 +5,10 @@ const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
 const User = require('../models/User');
 const { sendOrderApprovedEmail } = require('../config/order');
+const { attachShipmentToOrder } = require('./checkout');
+
+
+
 const VALID_TRANSITIONS = {
   placed: ['confirmed', 'cancelled'],
   confirmed: ['processing', 'cancelled'],
@@ -13,6 +17,7 @@ const VALID_TRANSITIONS = {
   delivered: ['return_requested'],
   return_requested: ['returned', 'delivered'],
 };
+
 
 const getAllOrders = catchAsync(async (req, res) => {
   const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -193,6 +198,7 @@ const approveOrder = catchAsync(async (req, res, next) => {
     message: 'Order approved'
   });
 });
+
 const resendOrderConfirmation = catchAsync(async (req, res, next) => {
 
   const order = await Order.findById(req.params.id);
@@ -205,5 +211,106 @@ const resendOrderConfirmation = catchAsync(async (req, res, next) => {
     success: true,
     message: 'Email resent'
   });
+
 });
-module.exports = { getAllOrders, getOrder, updateOrderStatus,setDeliveryEstimate, cancelOrder, markCODAsPaid, getCustomizedOrders ,approveOrder,resendOrderConfirmation};
+
+
+
+// const confirmOrder = catchAsync(async (req, res, next) => {
+
+//   const order = await Order.findById(req.params.id);
+
+//   if (!order) {
+//     return next(
+//       new AppError('Order not found.', 404)
+//     );
+//   }
+
+//   if (order.orderStatus !== 'pending') {
+//     return next(
+//       new AppError(
+//         'Order already processed.',
+//         400
+//       )
+//     );
+//   }
+
+//   order.orderStatus = 'confirmed';
+
+//   order.isCancellable = false;
+
+//   order.statusHistory.push({
+//     status: 'confirmed',
+//     note: 'Order approved by admin',
+//     updatedAt: new Date()
+//   });
+
+//   await order.save();
+
+//   // send approval mail
+
+//   await sendOrderApprovedEmail(order);
+
+//   // create shipment
+
+//   await attachShipmentToOrder(order);
+
+//   res.status(200).json({
+//     success: true,
+//     message: 'Order confirmed successfully'
+//   });
+
+
+// });
+
+
+
+const getAdminOrderStatus = catchAsync(async (req, res, next) => {
+
+  const order = await Order.findById(req.params.orderId)
+    .populate('user', 'name email phone');
+
+  if (!order) {
+    return next(new AppError('Order not found.', 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      orderId: order._id,
+      orderNumber: order.orderNumber,
+
+      customer: {
+        id: order.user?._id,
+        name: order.user?.name,
+        email: order.user?.email,
+        phone: order.user?.phone,
+      },
+
+      paymentStatus: order.paymentStatus,
+
+      orderStatus: order.orderStatus,
+
+      shipmentStatus: order.shipmentStatus || 'not_created',
+
+      courierName: order.courierName || null,
+
+      awbCode: order.awbCode || null,
+
+      estimatedDeliveryDate:
+        order.estimatedDeliveryDate || null,
+
+      isCancellable: order.isCancellable,
+
+      createdAt: order.createdAt,
+
+      updatedAt: order.updatedAt,
+
+      statusHistory: order.statusHistory || [],
+    },
+  });
+
+});
+
+
+module.exports = { getAllOrders, getOrder, updateOrderStatus,setDeliveryEstimate, cancelOrder, markCODAsPaid, getCustomizedOrders ,approveOrder,resendOrderConfirmation,getAdminOrderStatus};

@@ -57,6 +57,20 @@ const orderSchema = new mongoose.Schema({
     default: 'placed',
     index: true,
   },
+
+  shipmentStatus: {
+  type: String,
+  enum: [
+    'not_created',
+    'shipment_created',
+    'pickup_scheduled',
+    'in_transit',
+    'out_for_delivery',
+    'delivered',
+    'cancelled'
+  ],
+  default: 'not_created'
+},
   statusHistory: [{
     status: String,
     timestamp: { type: Date, default: Date.now },
