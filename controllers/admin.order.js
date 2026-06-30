@@ -34,7 +34,11 @@ const getAllOrders = catchAsync(async (req, res) => {
       .sort('-createdAt')
       .skip(skip)
       .limit(limit)
-      .populate('user', 'name email phone'),
+      .populate('user', 'name email phone')
+      .populate({
+        path: "items.product",
+        select: "name image description price category brand"
+      }),
     Order.countDocuments(filter),
   ]);
 
@@ -313,4 +317,4 @@ const getAdminOrderStatus = catchAsync(async (req, res, next) => {
 });
 
 
-module.exports = { getAllOrders, getOrder, updateOrderStatus,setDeliveryEstimate, cancelOrder, markCODAsPaid, getCustomizedOrders ,approveOrder,resendOrderConfirmation,getAdminOrderStatus};
+module.exports = { getAllOrders, getOrder, updateOrderStatus, setDeliveryEstimate, cancelOrder, markCODAsPaid, getCustomizedOrders, approveOrder, resendOrderConfirmation, getAdminOrderStatus };
