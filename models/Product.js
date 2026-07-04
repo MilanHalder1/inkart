@@ -4,13 +4,58 @@ const mongoose = require('mongoose');
 const slugify = require('slugify');
 
 const variantSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  value: { type: String, required: true },
-  priceModifier: { type: Number, default: 0 },
-  sku: { type: String },
 
-  stock: { type: Number, default: 0, min: 0 },
-  images: [{ url: String, publicId: String }],
+  color: {
+    name: {
+      type: String,
+      required: true,
+    },
+
+    hexCode: {
+      type: String,
+      required: true,
+    },
+  },
+
+  size: {
+    type: String,
+    enum: [
+      'XS',
+      'S',
+      'M',
+      'L',
+      'XL',
+      'XXL',
+      '3XL'
+    ],
+    required: true,
+  },
+
+  sku: String,
+
+  stock: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+
+  priceModifier: {
+    type: Number,
+    default: 0,
+  },
+
+  images: [
+    {
+      url: String,
+      publicId: String,
+    },
+  ],
+
+  isActive: {
+    type: Boolean,
+    default: true,
+  }
+
 }, { _id: true });
 
 const productSchema = new mongoose.Schema({
@@ -65,30 +110,7 @@ const productSchema = new mongoose.Schema({
   isFeatured: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true, index: true },
   isCustomizable: { type: Boolean, default: false },
-  availableColors: [
-    {
-      name: {
-        type: String,
-        required: true,
-        trim: true,
-      },
 
-      hexCode: {
-        type: String,
-        required: true,
-      },
-
-      image: {
-        url: String,
-        publicId: String,
-      },
-
-      isActive: {
-        type: Boolean,
-        default: true,
-      },
-    },
-  ],
   // Printable area config for customization module
   printableArea: {
     x: Number, y: Number,
