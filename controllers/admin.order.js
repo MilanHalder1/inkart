@@ -38,7 +38,12 @@ const getAllOrders = catchAsync(async (req, res) => {
       .populate({
         path: "items.product",
         select: "name image description price category brand"
-      }),
+      })
+       .populate({
+      path: "items.customizationId",
+      select:
+        "previewImage backgroundImage layers canvasWidth canvasHeight status createdAt updatedAt"
+    }),,
     Order.countDocuments(filter),
   ]);
 
@@ -53,7 +58,12 @@ const getAllOrders = catchAsync(async (req, res) => {
 const getOrder = catchAsync(async (req, res, next) => {
   const order = await Order.findById(req.params.id)
     .populate('user', 'name email phone')
-    .populate('items.product', 'name images sku');
+    .populate('items.product', 'name images sku')
+      .populate({
+      path: "items.customizationId",
+      select:
+        "previewImage backgroundImage layers canvasWidth canvasHeight status createdAt updatedAt"
+    })
   if (!order) return next(new AppError('Order not found.', 404));
   res.status(200).json({ success: true, data: { order } });
 });

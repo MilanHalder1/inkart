@@ -137,12 +137,16 @@ const updateProduct = catchAsync(async (req, res, next) => {
 });
 
 const deleteProduct = catchAsync(async (req, res, next) => {
-  const product = await Product.findById(req.params.id);
-  if (!product) return next(new AppError('Product not found.', 404));
+  const product = await Product.findByIdAndDelete(req.params.id);
 
-  // Soft delete preferred in production
-  await Product.findByIdAndUpdate(req.params.id, { isActive: false });
-  res.status(200).json({ success: true, message: 'Product deactivated successfully.' });
+  if (!product) {
+    return next(new AppError('Product not found.', 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    message: 'Product deleted successfully.'
+  });
 });
 
 const deleteProductImage = catchAsync(async (req, res, next) => {
