@@ -9,6 +9,10 @@ const orderItemSchema = new mongoose.Schema({
   image: String,
   price: { type: Number, required: true },       // snapshot
   quantity: { type: Number, required: true, min: 1 },
+  selectedColor: {
+  name: String,
+  hexCode: String,
+},
   customizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customization', default: null },
 }, { _id: true });
 

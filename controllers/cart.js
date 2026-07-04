@@ -29,7 +29,8 @@ const getCart = catchAsync(async (req, res) => {
 
 // ✅ ADD TO CART (FIXED STOCK + MERGE LOGIC)
 const addToCart = catchAsync(async (req, res, next) => {
-  const { productId, quantity = 1, variantId, customizationId } = req.body;
+  const { productId, quantity = 1, variantId, customizationId, selectedColor,
+  } = req.body;
 
   const product = await Product.findById(productId);
   if (!product || !product.isActive) {
@@ -112,7 +113,8 @@ const addToCart = catchAsync(async (req, res, next) => {
       variantId: variantId || null,
       quantity,
       price: finalPrice,
-      customizationId: customizationId || null
+      customizationId: customizationId || null,
+      selectedColor
     });
   }
 

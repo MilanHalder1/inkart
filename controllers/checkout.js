@@ -113,6 +113,7 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
       price: i.price,
       quantity: i.quantity,
       customizationId: i.customizationId,
+       selectedColor: i.selectedColor ||null
       
     })),
     shippingAddress: address.toObject(),

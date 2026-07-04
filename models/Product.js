@@ -65,7 +65,30 @@ const productSchema = new mongoose.Schema({
   isFeatured: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true, index: true },
   isCustomizable: { type: Boolean, default: false },
+  availableColors: [
+    {
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+      },
 
+      hexCode: {
+        type: String,
+        required: true,
+      },
+
+      image: {
+        url: String,
+        publicId: String,
+      },
+
+      isActive: {
+        type: Boolean,
+        default: true,
+      },
+    },
+  ],
   // Printable area config for customization module
   printableArea: {
     x: Number, y: Number,

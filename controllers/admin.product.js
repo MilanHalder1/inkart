@@ -38,6 +38,13 @@ const createProduct = catchAsync(async (req, res, next) => {
       JSON.parse(req.body.quantityPricing);
   }
 
+  if (req.body.availableColors) {
+  req.body.availableColors =
+    typeof req.body.availableColors === 'string'
+      ? JSON.parse(req.body.availableColors)
+      : req.body.availableColors;
+}
+
   const product = await Product.create({
     ...req.body,
     images,
@@ -114,6 +121,12 @@ const updateProduct = catchAsync(async (req, res, next) => {
       ...newImages,
     ];
   }
+  if (req.body.availableColors) {
+  req.body.availableColors =
+    typeof req.body.availableColors === 'string'
+      ? JSON.parse(req.body.availableColors)
+      : req.body.availableColors;
+}
 
   // ==========================================
   // Update Product
