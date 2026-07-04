@@ -8,8 +8,32 @@ const {
   updateProduct, deleteProduct, deleteProductImage, updateStock,
 } = require('../controllers/admin.product');
 
-const productImagesUpload = createUploader('products').array('images', 10);
-
+const productImagesUpload = createUploader('products').fields([
+  {
+    name: 'productImages',
+    maxCount: 10,
+  },
+  {
+    name: 'colorImages_0',
+    maxCount: 10,
+  },
+  {
+    name: 'colorImages_1',
+    maxCount: 10,
+  },
+  {
+    name: 'colorImages_2',
+    maxCount: 10,
+  },
+  {
+    name: 'colorImages_3',
+    maxCount: 10,
+  },
+  {
+    name: 'colorImages_4',
+    maxCount: 10,
+  },
+]);
 router.use(protect, restrictTo('admin', 'superadmin'));
 
 

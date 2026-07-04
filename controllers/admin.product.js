@@ -27,11 +27,11 @@ const getAllProducts = catchAsync(async (req, res) => {
 
 const createProduct = catchAsync(async (req, res, next) => {
 
-  const images = req.files?.map((f) => ({
-    url: f.path,
-    publicId: f.filename,
+ const images =
+  req.files?.productImages?.map((file) => ({
+    url: file.path,
+    publicId: file.filename,
   })) || [];
-
   // Parse quantity pricing if sent via form-data
   if (req.body.quantityPricing) {
     req.body.quantityPricing =
@@ -39,15 +39,32 @@ const createProduct = catchAsync(async (req, res, next) => {
   }
 
   if (req.body.availableColors) {
-  req.body.availableColors =
-    typeof req.body.availableColors === 'string'
-      ? JSON.parse(req.body.availableColors)
-      : req.body.availableColors;
-}
+    req.body.availableColors =
+      typeof req.body.availableColors === 'string'
+        ? JSON.parse(req.body.availableColors)
+        : req.body.availableColors;
+  }
+  let variants = [];
 
+  if (req.body.variants) {
+    variants =
+      typeof req.body.variants === 'string'
+        ? JSON.parse(req.body.variants)
+        : req.body.variants;
+  }
+  variants.forEach((variant, index) => {
+    const files = req.files?.[`colorImages_${index}`] || [];
+
+    variant.images = files.map((file) => ({
+      url: file.path,
+      publicId: file.filename,
+    }));
+  });
   const product = await Product.create({
     ...req.body,
     images,
+    variants,
+
     createdBy: req.user.id,
   });
 
@@ -64,56 +81,77 @@ const getProduct = catchAsync(async (req, res, next) => {
 });
 
 const updateProduct = catchAsync(async (req, res, next) => {
-
   const product = await Product.findById(req.params.id);
 
   if (!product) {
-    return next(
-      new AppError('Product not found.', 404)
-    );
+    return next(new AppError('Product not found.', 404));
   }
 
+  let variants = [];
+
   // ==========================================
-  // Parse JSON fields from form-data
+  // Parse JSON fields
   // ==========================================
 
   try {
     if (req.body.quantityPricing) {
-      req.body.quantityPricing = JSON.parse(
-        req.body.quantityPricing
-      );
+      req.body.quantityPricing = JSON.parse(req.body.quantityPricing);
     }
 
     if (req.body.variants) {
-      req.body.variants = JSON.parse(
-        req.body.variants
-      );
+      variants =
+        typeof req.body.variants === 'string'
+          ? JSON.parse(req.body.variants)
+          : req.body.variants;
+    }
+
+    if (req.body.availableColors) {
+      req.body.availableColors =
+        typeof req.body.availableColors === 'string'
+          ? JSON.parse(req.body.availableColors)
+          : req.body.availableColors;
     }
 
     if (req.body.specifications) {
-      req.body.specifications = JSON.parse(
-        req.body.specifications
-      );
+      req.body.specifications = JSON.parse(req.body.specifications);
     }
 
   } catch (err) {
-    return next(
-      new AppError(
-        'Invalid JSON in request body.',
-        400
-      )
-    );
+    return next(new AppError('Invalid JSON in request body.', 400));
   }
 
   // ==========================================
-  // Append new uploaded images
+  // Attach Color Images
   // ==========================================
 
-  if (req.files?.length) {
+  variants.forEach((variant, index) => {
 
-    const newImages = req.files.map((f) => ({
-      url: f.path,
-      publicId: f.filename,
+    const oldVariant = product.variants.find(
+      v => v.colorName === variant.colorName
+    );
+
+    const files = req.files?.[`colorImages_${index}`] || [];
+
+    if (files.length) {
+      variant.images = files.map(file => ({
+        url: file.path,
+        publicId: file.filename,
+      }));
+    } else {
+      variant.images = oldVariant?.images || [];
+    }
+
+  });
+
+  // ==========================================
+  // Main Product Images
+  // ==========================================
+
+  if (req.files?.productImages?.length) {
+
+    const newImages = req.files.productImages.map(file => ({
+      url: file.path,
+      publicId: file.filename,
     }));
 
     req.body.images = [
@@ -121,15 +159,11 @@ const updateProduct = catchAsync(async (req, res, next) => {
       ...newImages,
     ];
   }
-  if (req.body.availableColors) {
-  req.body.availableColors =
-    typeof req.body.availableColors === 'string'
-      ? JSON.parse(req.body.availableColors)
-      : req.body.availableColors;
-}
+
+  req.body.variants = variants;
 
   // ==========================================
-  // Update Product
+  // Update
   // ==========================================
 
   const updated = await Product.findByIdAndUpdate(

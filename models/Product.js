@@ -3,61 +3,54 @@
 const mongoose = require('mongoose');
 const slugify = require('slugify');
 
+const sizeSchema = new mongoose.Schema({
+
+    size:{
+        type:String,
+        enum:["XS","S","M","L","XL","XXL"]
+    },
+
+    stock:{
+        type:Number,
+        default:0
+    },
+
+    sku:String,
+      isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    priceModifier:{
+        type:Number,
+        default:0
+    }
+
+},{_id:false});
+
+
 const variantSchema = new mongoose.Schema({
 
-  color: {
-    name: {
-      type: String,
-      required: true,
+    colorName:{
+        type:String,
+        required:true
     },
 
-    hexCode: {
-      type: String,
-      required: true,
+    hexCode:{
+        type:String,
+        required:true
     },
-  },
 
-  size: {
-    type: String,
-    enum: [
-      'XS',
-      'S',
-      'M',
-      'L',
-      'XL',
-      'XXL',
-      '3XL'
+    images:[
+        {
+            url:String,
+            publicId:String
+        }
     ],
-    required: true,
-  },
 
-  sku: String,
+    sizes:[sizeSchema]
 
-  stock: {
-    type: Number,
-    default: 0,
-    min: 0,
-  },
-
-  priceModifier: {
-    type: Number,
-    default: 0,
-  },
-
-  images: [
-    {
-      url: String,
-      publicId: String,
-    },
-  ],
-
-  isActive: {
-    type: Boolean,
-    default: true,
-  }
-
-}, { _id: true });
-
+});
 const productSchema = new mongoose.Schema({
   name: { type: String, required: true, trim: true, maxlength: 200 },
   slug: { type: String, unique: true, index: true },
