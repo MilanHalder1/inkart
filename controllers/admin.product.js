@@ -27,11 +27,11 @@ const getAllProducts = catchAsync(async (req, res) => {
 
 const createProduct = catchAsync(async (req, res, next) => {
 
- const images =
-  req.files?.productImages?.map((file) => ({
-    url: file.path,
-    publicId: file.filename,
-  })) || [];
+  const images =
+    req.files?.productImages?.map((file) => ({
+      url: file.path,
+      publicId: file.filename,
+    })) || [];
   // Parse quantity pricing if sent via form-data
   if (req.body.quantityPricing) {
     req.body.quantityPricing =
@@ -53,12 +53,28 @@ const createProduct = catchAsync(async (req, res, next) => {
         : req.body.variants;
   }
   variants.forEach((variant, index) => {
-    const files = req.files?.[`colorImages_${index}`] || [];
 
-    variant.images = files.map((file) => ({
-      url: file.path,
-      publicId: file.filename,
-    }));
+    const frontImages =
+      req.files?.[`colorFront_${index}`] || [];
+
+    const backImages =
+      req.files?.[`colorBack_${index}`] || [];
+
+    variant.images = [
+
+      ...frontImages.map(file => ({
+        type: 'front',
+        url: file.path,
+        publicId: file.filename,
+      })),
+
+      ...backImages.map(file => ({
+        type: 'back',
+        url: file.path,
+        publicId: file.filename,
+      })),
+
+    ];
   });
   const product = await Product.create({
     ...req.body,
@@ -130,15 +146,35 @@ const updateProduct = catchAsync(async (req, res, next) => {
       v => v.colorName === variant.colorName
     );
 
-    const files = req.files?.[`colorImages_${index}`] || [];
+    const frontImages =
+      req.files?.[`colorFront_${index}`] || [];
 
-    if (files.length) {
-      variant.images = files.map(file => ({
-        url: file.path,
-        publicId: file.filename,
-      }));
-    } else {
+    const backImages =
+      req.files?.[`colorBack_${index}`] || [];
+
+    if (frontImages.length || backImages.length) {
+
+      variant.images = [
+
+        ...frontImages.map(file => ({
+          type: 'front',
+          url: file.path,
+          publicId: file.filename,
+        })),
+
+        ...backImages.map(file => ({
+          type: 'back',
+          url: file.path,
+          publicId: file.filename,
+        })),
+
+      ];
+
+    }
+    else {
+
       variant.images = oldVariant?.images || [];
+
     }
 
   });
