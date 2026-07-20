@@ -28,105 +28,224 @@ const getCart = catchAsync(async (req, res) => {
 });
 
 // ✅ ADD TO CART (FIXED STOCK + MERGE LOGIC)
+
 const addToCart = catchAsync(async (req, res, next) => {
-  const { productId, quantity = 1, variantId, customizationId, selectedColor,
+  const {
+    productId,
+    quantity = 1,
+    variantId,
+    customizationId,
+    selectedColor,
+    selectedSizes,
   } = req.body;
 
+  console.log("addToCart", req.body);
+
   const product = await Product.findById(productId);
+  console.log("=================================");
+  console.log("Product Category:", product.productCategoryType);
+  console.log("Selected Sizes:", selectedSizes);
+  console.log("Is Array:", Array.isArray(selectedSizes));
+  console.log("Length:", selectedSizes?.length);
+  console.log("=================================");
+
   if (!product || !product.isActive) {
-    return next(new AppError('Product not found or unavailable.', 404));
+    return next(
+      new AppError("Product not found or unavailable.", 404)
+    );
   }
 
-  // 🔍 Base price
-  let finalPrice = getUnitPrice(product, quantity);
+  // ============================================
+  // Calculate final quantity
+  // ============================================
+  let finalQuantity = quantity;
+ 
+  console.log("product.productCategoryType", product.productCategoryType)
+  console.log("Before:", finalQuantity);
 
-  // 🔍 Variant handling
+
+  console.log("Category =", product.productCategoryType);
+  console.log("selectedSizes =", selectedSizes);
+  console.log("isArray =", Array.isArray(selectedSizes));
+  console.log("length =", selectedSizes?.length);
+
+  if (
+    product.productCategoryType === "apparel" &&
+    Array.isArray(selectedSizes) &&
+    selectedSizes.length
+  ) {
+
+    console.log("INSIDE APPAREL");
+
+    finalQuantity = selectedSizes.reduce((sum, item) => {
+      console.log(item);
+      return sum + Number(item.quantity);
+    }, 0);
+  }
+
+  console.log("FINAL =", finalQuantity);
+
+  // ============================================
+  // Quantity Pricing
+  // ============================================
+
+  let finalPrice = getUnitPrice(product, finalQuantity);
+
+  // ============================================
+  // Variant
+  // ============================================
+
   let variant = null;
+
   if (variantId) {
     variant = product.variants.id(variantId);
-    if (!variant) return next(new AppError('Variant not found.', 404));
+
+    if (!variant) {
+      return next(new AppError("Variant not found.", 404));
+    }
 
     finalPrice += variant.priceModifier || 0;
   }
 
-  // 🛒 Get/Create Cart
+
   const cart = await Cart.findOneAndUpdate(
     { user: req.user.id },
     {},
-    { upsert: true, new: true }
+    {
+      upsert: true,
+      new: true,
+    }
   );
 
-  const existingItemIndex = cart.items.findIndex(
-    (item) =>
+  const existingItemIndex = cart.items.findIndex((item) => {
+    return (
       item.product.toString() === productId &&
-      (item.variantId ? item.variantId.toString() : null) === (variantId || null)
-  );
+      (item.variantId?.toString() || null) ===
+      (variantId || null) &&
+      (item.selectedColor || null) ===
+      (selectedColor || null) &&
+      (item.customizationId?.toString() || null) ===
+      (customizationId || null)
+    );
+  });
 
-  // 🔁 EXISTING ITEM → MERGE
+
   if (existingItemIndex > -1) {
     const existingItem = cart.items[existingItemIndex];
-    const newQuantity = existingItem.quantity + quantity;
 
-    // ✅ STOCK VALIDATION
-    if (product.productType === 'stocked') {
+    const newQuantity =
+      existingItem.quantity + finalQuantity;
+
+
+    if (product.productType === "stocked") {
       if (variant) {
         if (newQuantity > variant.stock) {
-          return next(new AppError(`Only ${variant.stock} units available.`, 400));
+          return next(
+            new AppError(
+              `Only ${variant.stock} units available.`,
+              400
+            )
+          );
         }
       } else {
         if (newQuantity > product.stock) {
-          return next(new AppError(`Only ${product.stock} units available.`, 400));
+          return next(
+            new AppError(
+              `Only ${product.stock} units available.`,
+              400
+            )
+          );
         }
       }
     }
 
     existingItem.quantity = newQuantity;
 
-    let updatedPrice = getUnitPrice(
+    existingItem.price = getUnitPrice(
       product,
       newQuantity
     );
 
     if (variant) {
-      updatedPrice +=
+      existingItem.price +=
         variant.priceModifier || 0;
     }
 
-    existingItem.price = updatedPrice;
+    existingItem.selectedColor = selectedColor;
+
+    if (
+      product.productCategoryType === "apparel"
+    ) {
+      existingItem.selectedSizes =
+        selectedSizes || [];
+    }
   }
-  // ➕ NEW ITEM
+
+  // ============================================
+  // New Item
+  // ============================================
+
   else {
-    if (product.productType === 'stocked') {
+    if (product.productType === "stocked") {
       if (variant) {
-        if (quantity > variant.stock) {
-          return next(new AppError(`Only ${variant.stock} units available.`, 400));
+        if (finalQuantity > variant.stock) {
+          return next(
+            new AppError(
+              `Only ${variant.stock} units available.`,
+              400
+            )
+          );
         }
       } else {
-        if (quantity > product.stock) {
-          return next(new AppError(`Only ${product.stock} units available.`, 400));
+        if (finalQuantity > product.stock) {
+          return next(
+            new AppError(
+              `Only ${product.stock} units available.`,
+              400
+            )
+          );
         }
       }
     }
 
     cart.items.push({
       product: productId,
+
       variantId: variantId || null,
-      quantity,
+
+      quantity: finalQuantity,
+
       price: finalPrice,
-      customizationId: customizationId || null,
-      selectedColor
+
+      customizationId:
+        customizationId || null,
+
+      selectedColor,
+
+      selectedSizes:
+        product.productCategoryType ===
+          "apparel"
+          ? selectedSizes || []
+          : [],
     });
   }
 
   await cart.save();
 
-  const populated = await cart.populate('items.product', 'name images basePrice productType stock');
+  const populated = await cart.populate(
+    "items.product",
+    "name images basePrice productType stock"
+  );
 
   res.status(200).json({
     success: true,
-    data: { cart: populated }
+    data: {
+      cart: populated,
+    },
   });
 });
+
+
 
 // ✅ UPDATE CART ITEM (INC / DEC)
 const updateCartItem = catchAsync(async (req, res, next) => {

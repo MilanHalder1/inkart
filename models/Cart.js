@@ -6,10 +6,21 @@ const cartItemSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   variantId: { type: mongoose.Schema.Types.ObjectId, default: null },
   quantity: { type: Number, required: true, min: 1, default: 1 },
+  selectedSizes: [
+    {
+      size: {
+        type: String,
+      },
+
+      quantity: {
+        type: Number,
+        min: 1,
+      },
+    },
+  ],
   price: { type: Number, required: true },      // captured at add time
   selectedColor: {
-    name: String,
-    hexCode: String,
+    name: String
   },
   customizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customization', default: null },
 }, { _id: true });

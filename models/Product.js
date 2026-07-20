@@ -5,50 +5,63 @@ const slugify = require('slugify');
 
 const sizeSchema = new mongoose.Schema({
 
-    size:{
-        type:String,
-        enum:["XS","S","M","L","XL","XXL"]
-    },
+  size: {
+    type: String,
+    enum: ["XS", "S", "M", "L", "XL", "XXL"]
+  },
 
-    stock:{
-        type:Number,
-        default:0
-    },
+  stock: {
+    type: Number,
+    default: 0
+  },
 
-    sku:String,
-      isActive: {
-      type: Boolean,
-      default: true,
-    },
+  sku: String,
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
 
-    priceModifier:{
-        type:Number,
-        default:0
-    }
+  priceModifier: {
+    type: Number,
+    default: 0
+  }
 
-},{_id:false});
+}, { _id: false });
 
 
 const variantSchema = new mongoose.Schema({
 
-    colorName:{
-        type:String,
-        required:true
+  colorName: {
+    type: String,
+    required: true
+  },
+
+  hexCode: {
+    type: String,
+    required: true
+  },
+
+  images: [
+    {
+      type: {
+        type: String,
+        enum: [
+          'front',
+          'back',
+          'left',
+          'right',
+          'zoom'
+        ],
+        default: 'front',
+      },
+
+      url: String,
+
+      publicId: String,
     },
+  ],
 
-    hexCode:{
-        type:String,
-        required:true
-    },
-
-    images:[
-        {
-            url:String,
-            publicId:String
-        }
-    ],
-
-    sizes:[sizeSchema]
+  sizes: [sizeSchema]
 
 });
 const productSchema = new mongoose.Schema({
@@ -71,6 +84,11 @@ const productSchema = new mongoose.Schema({
     required: true,
     default: 'stocked',
     index: true,
+  },
+  productCategoryType: {  
+    type: String,
+    enum: ['normal', 'apparel'],
+    default: 'normal',
   },
   quantityPricing: [
     {

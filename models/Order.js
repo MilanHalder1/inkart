@@ -8,11 +8,31 @@ const orderItemSchema = new mongoose.Schema({
   name: { type: String, required: true },        // snapshot
   image: String,
   price: { type: Number, required: true },       // snapshot
-  quantity: { type: Number, required: true, min: 1 },
+  // quantity: { type: Number, required: true, min: 1 },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+
+  selectedSizes: [
+    {
+      size: {
+        type: String,
+        required: true,
+      },
+
+      quantity: {
+        type: Number,
+        required: true,
+        min: 1,
+      },
+    },
+  ],
   selectedColor: {
-  name: String,
-  hexCode: String,
-},
+    name: String,
+    hexCode: String,
+  },
   customizationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customization', default: null },
 }, { _id: true });
 
@@ -63,18 +83,18 @@ const orderSchema = new mongoose.Schema({
   },
 
   shipmentStatus: {
-  type: String,
-  enum: [
-    'not_created',
-    'shipment_created',
-    'pickup_scheduled',
-    'in_transit',
-    'out_for_delivery',
-    'delivered',
-    'cancelled'
-  ],
-  default: 'not_created'
-},
+    type: String,
+    enum: [
+      'not_created',
+      'shipment_created',
+      'pickup_scheduled',
+      'in_transit',
+      'out_for_delivery',
+      'delivered',
+      'cancelled'
+    ],
+    default: 'not_created'
+  },
   statusHistory: [{
     status: String,
     timestamp: { type: Date, default: Date.now },
@@ -109,9 +129,9 @@ const orderSchema = new mongoose.Schema({
   },
 
   hiddenByUsers: [{
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'User'
-}],
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
   approvedAt: Date,
   deliveredAt: Date,
   cancelReason: String,

@@ -98,9 +98,9 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
     receipt: `rcpt_${Date.now()}`,
     notes: { userId: req.user.id.toString() },
   });
- const isCustomizedOrder = cart.items.some(
-  item => item.customizationId
-);
+  const isCustomizedOrder = cart.items.some(
+    item => item.customizationId
+  );
 
   // Persist a pending order
   const order = await Order.create({
@@ -110,11 +110,16 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
       variantId: i.variantId,
       name: i.product.name,
       image: i.product.images?.[0]?.url,
+
       price: i.price,
+
       quantity: i.quantity,
+
+      selectedSizes: i.selectedSizes || [],
+
       customizationId: i.customizationId,
-       selectedColor: i.selectedColor ||null
-      
+
+      selectedColor: i.selectedColor || null,
     })),
     shippingAddress: address.toObject(),
     subtotal,
@@ -139,7 +144,7 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
       orderNumber: order.orderNumber,
       razorpayOrderId: rzpOrder.id,
       amount: totalInPaise,
-      
+
       currency: 'INR',
       keyId: process.env.RAZORPAY_KEY_ID,
       estimatedDeliveryDays: maxDeliveryDays,
@@ -341,7 +346,7 @@ const getOrderDetails = catchAsync(async (req, res, next) => {
     new Date() < order.shipmentCutoffTime &&
     !['shipped', 'delivered', 'cancelled']
       .includes(order.orderStatus);
-  res.status(200).json({ success: true, data: { order,isCancellable } });
+  res.status(200).json({ success: true, data: { order, isCancellable } });
 });
 
 //shipments
@@ -379,7 +384,22 @@ const attachShipmentToOrder = async (order) => {
 exports.createCODOrder = catchAsync(async (req, res, next) => {
   const order = await Order.create({
     user: req.user.id,
-    items: cart.items,
+    items: cart.items.map((i) => ({
+      product: i.product._id,
+      variantId: i.variantId,
+      name: i.product.name,
+      image: i.product.images?.[0]?.url,
+
+      price: i.price,
+
+      quantity: i.quantity,
+
+      selectedSizes: i.selectedSizes || [],
+
+      customizationId: i.customizationId,
+
+      selectedColor: i.selectedColor || null,
+    })),
     shippingAddress: address,
     total,
 
