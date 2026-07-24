@@ -25,47 +25,121 @@ const getAllOrders = catchAsync(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const filter = {};
-  if (req.query.status) filter.orderStatus = req.query.status;
-  if (req.query.paymentStatus) filter.paymentStatus = req.query.paymentStatus;
-  if (req.query.search) filter.orderNumber = new RegExp(req.query.search, 'i');
+
+  if (req.query.status)
+    filter.orderStatus = req.query.status;
+
+  if (req.query.paymentStatus)
+    filter.paymentStatus = req.query.paymentStatus;
+
+  if (req.query.search)
+    filter.orderNumber = new RegExp(req.query.search, "i");
 
   const [orders, total] = await Promise.all([
     Order.find(filter)
-      .sort('-createdAt')
+      .sort("-createdAt")
       .skip(skip)
       .limit(limit)
-      .populate('user', 'name email phone')
+      .populate("user", "name email phone")
       .populate({
         path: "items.product",
-        select: "name image description price category brand"
+        select: "name images description basePrice category"
       })
-       .populate({
-      path: "items.customizationId",
-      select:
-        "previewImage backgroundImage layers canvasWidth canvasHeight status createdAt updatedAt"
-    }),,
+      .populate({
+        path: "items.customizationId",
+        select:
+          "previewImage backgroundImage layers canvasWidth canvasHeight status createdAt updatedAt"
+      }),
+
     Order.countDocuments(filter),
   ]);
 
+  const formattedOrders = orders.map((order) => {
+    const obj = order.toObject();
+
+    obj.items = obj.items.map((item) => ({
+      ...item,
+
+      color: item.selectedColor || null,
+
+      quantity: item.quantity,
+
+      sizeBreakdown:
+        item.selectedSizes && item.selectedSizes.length
+          ? item.selectedSizes
+          : [],
+
+      totalSizes:
+        item.selectedSizes?.reduce(
+          (sum, s) => sum + s.quantity,
+          0
+        ) || item.quantity,
+    }));
+
+    return obj;
+  });
+
   res.status(200).json({
     success: true,
-    results: orders.length,
-    pagination: { page, limit, total, pages: Math.ceil(total / limit) },
-    data: { orders },
+    results: formattedOrders.length,
+
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit),
+    },
+
+    data: {
+      orders: formattedOrders,
+    },
   });
 });
 
 const getOrder = catchAsync(async (req, res, next) => {
+
   const order = await Order.findById(req.params.id)
-    .populate('user', 'name email phone')
-    .populate('items.product', 'name images sku')
-      .populate({
+    .populate("user", "name email phone")
+    .populate("items.product", "name images sku")
+    .populate({
       path: "items.customizationId",
       select:
-        "previewImage backgroundImage layers canvasWidth canvasHeight status createdAt updatedAt"
-    })
-  if (!order) return next(new AppError('Order not found.', 404));
-  res.status(200).json({ success: true, data: { order } });
+        "previewImage backgroundImage layers canvasWidth canvasHeight status createdAt updatedAt",
+    });
+
+  if (!order)
+    return next(new AppError("Order not found.", 404));
+
+  const formattedOrder = order.toObject();
+
+  formattedOrder.items = formattedOrder.items.map((item) => ({
+
+    ...item,
+
+    color: item.selectedColor || null,
+
+    quantity: item.quantity,
+
+    sizeBreakdown:
+      item.selectedSizes && item.selectedSizes.length
+        ? item.selectedSizes
+        : [],
+
+    totalSizes:
+      item.selectedSizes?.reduce(
+        (sum, s) => sum + s.quantity,
+        0
+      ) || item.quantity,
+
+  }));
+
+  res.status(200).json({
+    success: true,
+    data: {
+      order: formattedOrder,
+    },
+  });
+
 });
 
 const updateOrderStatus = catchAsync(async (req, res, next) => {
