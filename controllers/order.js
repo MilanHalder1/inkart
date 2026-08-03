@@ -3,7 +3,7 @@ const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
 
 const getMyOrders = catchAsync(async (req, res) => {
-    console.log("req.user.id====>",req.user.id)
+  console.log("req.user.id====>", req.user.id)
   const orders = await Order.find({
     user: req.user.id,
   })
@@ -35,7 +35,7 @@ const cancelMyOrder = catchAsync(async (req, res, next) => {
     _id: req.params.id,
     user: req.user.id,
   });
-console.log('order',order)
+  console.log('order', order)
   if (!order) {
     return next(
       new AppError('Order not found', 404)
@@ -147,4 +147,4 @@ const hideOrderFromHistory = catchAsync(async (req, res, next) => {
     message: 'Order removed from history'
   });
 });
-module.exports={getMyOrders,cancelMyOrder,hideOrderFromHistory}
+module.exports = { getMyOrders, cancelMyOrder, hideOrderFromHistory }

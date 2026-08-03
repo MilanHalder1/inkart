@@ -3,10 +3,9 @@
 const router = require('express').Router();
 
 const { protect } = require('../middleware/Auth');
-
 const {
   trackMyOrder,
-  checkDelivery,
+  checkDelivery,shipmentDetails,getLabel,getManifest,pickupShipment,cancelOrderShipment
 } = require('../controllers/shipment');
 
 router.get(
@@ -15,5 +14,38 @@ router.get(
   trackMyOrder
 );
 
-router.post('/check-delivery',checkDelivery)
+router.post('/check-delivery',checkDelivery);
+router.get(
+    '/:id/shipment',
+    protect,
+    shipmentDetails
+);
+
+
+router.get(
+    '/:id/label',
+    protect,
+    getLabel
+);
+
+router.get(
+    '/:id/manifest',
+    protect,
+    getManifest
+);
+
+router.post(
+    '/:id/pickup',
+    protect,
+    pickupShipment
+);
+
+router.post(
+    '/:id/cancel-shipment',
+    protect,
+    cancelOrderShipment
+);
+
+
+
 module.exports = router;

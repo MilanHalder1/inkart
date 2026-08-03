@@ -3,34 +3,47 @@
 const axios = require('axios');
 
 let token = null;
+let tokenExpiry = null;
 
 
 // 🔑 Generate Token
 const getToken = async () => {
-
   try {
+    // Token still valid
+    if (
+      token &&
+      tokenExpiry &&
+      Date.now() < tokenExpiry
+    ) {
+      return token;
+    }
 
-    if (token) return token;
-    console.log('process.env.SHIPROCKET_BASE_URL', process.env.SHIPROCKET_BASE_URL)
     const res = await axios.post(
       `${process.env.SHIPROCKET_BASE_URL}/auth/login`,
       {
         email: process.env.SHIPROCKET_EMAIL,
-
         password: process.env.SHIPROCKET_PASSWORD,
       }
     );
 
     token = res.data.token;
 
-    console.log('✅ Shiprocket Token Generated');
+    // Shiprocket token expires in ~10 days.
+    // Refresh automatically after 9 days.
+    tokenExpiry =
+      Date.now() + 9 * 24 * 60 * 60 * 1000;
+
+    console.log("✅ Shiprocket Token Generated");
 
     return token;
 
   } catch (err) {
 
+    token = null;
+    tokenExpiry = null;
+
     console.error(
-      '❌ Shiprocket Auth Error:',
+      "Shiprocket Login Error",
       err.response?.data || err.message
     );
 
@@ -132,8 +145,42 @@ const createShipment = async (order) => {
     );
 
     console.log('✅ Shipment Created');
-    console.log("shipment data", res.data,res?.data?.data)
-    return res.data;
+    console.log("shipment data", res.data, res?.data?.data)
+    const shipment = res.data;
+
+    return {
+      shiprocketOrderId:
+        shipment.order_id,
+
+      shipmentId:
+        shipment.shipment_id,
+
+      awb:
+        shipment.awb_code,
+
+      courier:
+        shipment.courier_name,
+
+      trackingUrl:
+        shipment.tracking_url,
+
+      status:
+        shipment.status,
+
+      manifestUrl:
+        shipment.manifest_url,
+
+      labelUrl:
+        shipment.label_url,
+
+      pickupToken:
+        shipment.pickup_token,
+
+      estimatedDeliveryDate:
+        shipment.estimated_delivery_date,
+
+      raw: shipment
+    };
 
   } catch (err) {
 
@@ -151,7 +198,7 @@ const createShipment = async (order) => {
 const trackShipment = async (awb) => {
 
   try {
-console.log('track shipment')
+    console.log('track shipment')
     const authToken = await getToken();
 
     const res = await axios.get(
@@ -162,7 +209,7 @@ console.log('track shipment')
         },
       }
     );
-    console.log('res.data',res.data)
+    console.log('res.data', res.data)
 
     return res.data;
 
@@ -175,6 +222,27 @@ console.log('track shipment')
 
     throw err;
   }
+};
+
+const schedulePickup = async (
+  shipmentId
+) => {
+
+  const authToken = await getToken();
+
+  const res = await axios.post(
+    `${process.env.SHIPROCKET_BASE_URL}/courier/generate/pickup`,
+    {
+      shipment_id: [shipmentId]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    }
+  );
+
+  return res.data;
 };
 
 const getDeliveryEstimate = async ({
@@ -202,8 +270,86 @@ const getDeliveryEstimate = async ({
   return res.data;
 };
 
+
+const cancelShipment = async (
+  shipmentId
+) => {
+
+  const authToken = await getToken();
+
+  const res = await axios.post(
+    `${process.env.SHIPROCKET_BASE_URL}/orders/cancel`,
+    {
+      ids: [shipmentId]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    }
+  );
+
+  return res.data;
+};
+
+const generateManifest = async (
+  shipmentId
+) => {
+
+  const authToken = await getToken();
+
+  const res = await axios.post(
+    `${process.env.SHIPROCKET_BASE_URL}/manifests/generate`,
+    {
+      shipment_id: [shipmentId]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    }
+  );
+
+  return res.data;
+};
+const generateLabel = async (
+  shipmentId
+) => {
+
+  const authToken = await getToken();
+
+  const res = await axios.post(
+    `${process.env.SHIPROCKET_BASE_URL}/courier/generate/label`,
+    {
+      shipment_id: [shipmentId]
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    }
+  );
+
+  return res.data;
+};
+const getShipmentDetails = async (shipmentId) => {
+
+  const authToken = await getToken();
+
+  const res = await axios.get(
+    `${process.env.SHIPROCKET_BASE_URL}/shipments/${shipmentId}`,
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`
+      }
+    }
+  );
+
+  return res.data;
+};
+
 module.exports = {
   createShipment,
   trackShipment,
-  getDeliveryEstimate
+  getDeliveryEstimate, cancelShipment, generateLabel, generateManifest, schedulePickup, getShipmentDetails
 };

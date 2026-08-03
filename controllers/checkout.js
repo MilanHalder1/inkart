@@ -409,12 +409,42 @@ const attachShipmentToOrder = async (order) => {
     const shipment = await createShipment(order);
     console.log("shipment  checkout data", shipment)
     order.shipment = {
-      awb: shipment.awb_code,
-      courier: shipment.courier_name,
-      status: shipment.status,
-      trackingUrl: shipment.tracking_url,
-      shiprocketOrderId: shipment.order_id,
-      shipmentId: shipment.shipment_id,
+
+      shiprocketOrderId:
+        shipment.shiprocketOrderId,
+
+      shipmentId:
+        shipment.shipmentId,
+
+      awb:
+        shipment.awb,
+
+      courier:
+        shipment.courier,
+
+      trackingUrl:
+        shipment.trackingUrl,
+
+      status:
+        shipment.status,
+
+      manifestUrl:
+        shipment.manifestUrl || "",
+
+      labelUrl:
+        shipment.labelUrl || "",
+
+      pickupToken:
+        shipment.pickupToken || "",
+
+      estimatedDeliveryDate:
+        shipment.estimatedDeliveryDate
+          ? new Date(shipment.estimatedDeliveryDate)
+          : null,
+
+      lastTrackingUpdate: new Date(),
+
+      lastShiprocketError: null,
     };
 
     order.trackingNumber = shipment.awb_code;
@@ -423,11 +453,29 @@ const attachShipmentToOrder = async (order) => {
 
     return order;
 
-  } catch (err) {
-    console.error('❌ Shiprocket Error:', err.message);
-    return order;
+  } 
+    catch (err) {
+
+      console.error(
+        "Shiprocket Error",
+        err.response?.data || err.message
+      );
+
+      order.shipment = {
+        status: "failed",
+        lastTrackingUpdate: new Date(),
+        lastShiprocketError:
+          JSON.stringify(
+            err.response?.data || err.message
+          ),
+      };
+
+      await order.save();
+
+      return order;
+    }
   }
-};
+;
 
 exports.createCODOrder = catchAsync(async (req, res, next) => {
   const order = await Order.create({
