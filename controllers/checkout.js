@@ -78,9 +78,72 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
     }
   }
 
-  const subtotal = cart.items.reduce((s, i) => s + i.price * i.quantity, 0);
+
+  let subtotal = 0;
+  let taxableAmount = 0;
+  let taxAmount = 0;
+
+  const orderItems = cart.items.map((item) => {
+
+    const qty = item.quantity;
+
+    const taxable = item.price * qty;
+
+    const gstPercent =
+      item.product.gstPercentage || 0;
+
+    const gst =
+      (taxable * gstPercent) / 100;
+
+    subtotal += taxable;
+
+    taxableAmount += taxable;
+
+    taxAmount += gst;
+
+    return {
+
+      product: item.product._id,
+
+      variantId: item.variantId,
+
+      name: item.product.name,
+
+      image: item.product.images?.[0]?.url,
+
+      price: item.price,
+
+      quantity: qty,
+
+      selectedSizes: item.selectedSizes || [],
+
+      customizationId: item.customizationId,
+
+      selectedColor: item.selectedColor,
+
+      hsnCode: item.product.hsnCode,
+
+      gstPercentage: gstPercent,
+
+      taxableAmount: taxable,
+
+      gstAmount: gst,
+
+      lineTotal: taxable + gst
+
+    };
+
+  });
+
   const couponDiscount = cart.couponDiscount || 0;
-  const total = Math.max(0, subtotal - couponDiscount);
+
+  const total =
+    Math.max(
+      0,
+      subtotal +
+      taxAmount -
+      couponDiscount
+    );
   const totalInPaise = Math.round(total * 100);
   const maxDeliveryDays = Math.max(
     ...cart.items.map(
@@ -105,25 +168,12 @@ const createRazorpayOrder = catchAsync(async (req, res, next) => {
   // Persist a pending order
   const order = await Order.create({
     user: req.user.id,
-    items: cart.items.map((i) => ({
-      product: i.product._id,
-      variantId: i.variantId,
-      name: i.product.name,
-      image: i.product.images?.[0]?.url,
-
-      price: i.price,
-
-      quantity: i.quantity,
-
-      selectedSizes: i.selectedSizes || [],
-
-      customizationId: i.customizationId,
-
-      selectedColor: i.selectedColor || null,
-    })),
+    items: orderItems,
     shippingAddress: address.toObject(),
     subtotal,
     shipmentCutoffTime,
+    taxableAmount,
+    taxAmount,
     couponDiscount,
     total,
     isCustomizedOrder,
@@ -351,15 +401,13 @@ const getOrderDetails = catchAsync(async (req, res, next) => {
 
 //shipments
 
-
-
 const attachShipmentToOrder = async (order) => {
   try {
     console.log("shipment order function")
     if (order.shipment?.awb) return order; // ✅ already exists
 
     const shipment = await createShipment(order);
-    console.log("shipment  checkoout data", shipment)
+    console.log("shipment  checkout data", shipment)
     order.shipment = {
       awb: shipment.awb_code,
       courier: shipment.courier_name,

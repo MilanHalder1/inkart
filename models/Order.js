@@ -9,6 +9,27 @@ const orderItemSchema = new mongoose.Schema({
   image: String,
   price: { type: Number, required: true },       // snapshot
   // quantity: { type: Number, required: true, min: 1 },
+  hsnCode: String,
+
+  gstPercentage: {
+    type: Number,
+    default: 0,
+  },
+
+  taxableAmount: {
+    type: Number,
+    default: 0,
+  },
+
+  gstAmount: {
+    type: Number,
+    default: 0,
+  },
+
+  lineTotal: {
+    type: Number,
+    default: 0,
+  },
   quantity: {
     type: Number,
     required: true,
@@ -53,11 +74,29 @@ const orderSchema = new mongoose.Schema({
   items: [orderItemSchema],
   shippingAddress: shippingAddressSchema,
 
-  subtotal: { type: Number, required: true },
-  shippingCharge: { type: Number, default: 0 },
-  taxAmount: { type: Number, default: 0 },
-  couponDiscount: { type: Number, default: 0 },
-  total: { type: Number, required: true },
+  subtotal: Number,
+
+  shippingCharge: {
+    type: Number,
+    default: 0,
+  },
+
+  taxableAmount: {
+    type: Number,
+    default: 0,
+  },
+
+  taxAmount: {
+    type: Number,
+    default: 0,
+  },
+
+  couponDiscount: {
+    type: Number,
+    default: 0,
+  },
+
+  total: Number,
 
   coupon: { type: mongoose.Schema.Types.ObjectId, ref: 'Coupon', default: null },
   couponCode: String,

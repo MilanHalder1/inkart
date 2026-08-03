@@ -85,7 +85,7 @@ const productSchema = new mongoose.Schema({
     default: 'stocked',
     index: true,
   },
-  productCategoryType: {  
+  productCategoryType: {
     type: String,
     enum: ['normal', 'apparel'],
     default: 'normal',
@@ -112,6 +112,16 @@ const productSchema = new mongoose.Schema({
   basePrice: { type: Number, required: true, min: 0 },
   discountedPrice: { type: Number, min: 0 },
   taxPercent: { type: Number, default: 0 },
+  hsnCode: {
+    type: String,
+    trim: true,
+  },
+
+  gstPercentage: {
+    type: Number,
+    default: 18,
+    min: 0,
+  },
   pricingTier: { type: String, default: 'standard' }, // set by super admin
 
   images: [{ url: String, publicId: String }],
@@ -123,27 +133,27 @@ const productSchema = new mongoose.Schema({
   isCustomizable: { type: Boolean, default: false },
 
   // Printable area config for customization module
- printableAreas: [
-  {
-    side: {
-      type: String,
-      enum: [
-        "front",
-        "back",
-        "left",
-        "right"
-      ]
-    },
+  printableAreas: [
+    {
+      side: {
+        type: String,
+        enum: [
+          "front",
+          "back",
+          "left",
+          "right"
+        ]
+      },
 
-    x: Number,
+      x: Number,
 
-    y: Number,
+      y: Number,
 
-    width: Number,
+      width: Number,
 
-    height: Number
-  }
-],
+      height: Number
+    }
+  ],
 
   ratingsAverage: { type: Number, default: 0, min: 0, max: 5, set: (v) => Math.round(v * 10) / 10 },
   ratingsCount: { type: Number, default: 0 },
