@@ -21,7 +21,7 @@ const uploadBackgroundImage = [
       data: {
         imageUrl: req.file.path,
         publicId: req.file.filename,
-        printableArea: product.printableArea,
+        printableAreas: product.printableAreas,
         canvasWidth: 800,   // standard canvas
         canvasHeight: 600,
       },
@@ -29,36 +29,39 @@ const uploadBackgroundImage = [
   }),
 ];
 
-// Save or update a design (layers as JSON + preview image)
 const saveDesign = catchAsync(async (req, res, next) => {
-  const { productId, layers, backgroundImage, canvasWidth, canvasHeight } = req.body;
+  const {
+    productId,
+    designs
+  } = req.body;
+
 
   const product = await Product.findById(productId);
   if (!product || !product.isCustomizable) return next(new AppError('Product not found or not customizable.', 404));
 
-  // Preview image (base64 or URL from client render)
-  let previewImage = {};
-  if (req.body.previewImageUrl) {
-    previewImage = { url: req.body.previewImageUrl };
-  }
 
   const customization = await Customization.findOneAndUpdate(
-    { user: req.user.id, product: productId, status: { $ne: 'ordered' } },
     {
       user: req.user.id,
       product: productId,
-      layers: layers || [],
-      backgroundImage: backgroundImage || {},
-      previewImage,
-      canvasWidth,
-      canvasHeight,
-      status: 'saved',
+      status: {
+        $ne: "ordered",
+      },
     },
-{
-  upsert: true,
-  returnDocument: 'after',
-  setDefaultsOnInsert: true,
-}
+    {
+      user: req.user.id,
+
+      product: productId,
+
+      designs,
+
+      status: "saved",
+    },
+    {
+      upsert: true,
+      returnDocument: "after",
+      setDefaultsOnInsert: true,
+    }
   );
 
   res.status(200).json({ success: true, data: { customization } });
@@ -66,28 +69,67 @@ const saveDesign = catchAsync(async (req, res, next) => {
 
 // Upload preview image rendered by client canvas
 const uploadPreviewImage = [
-  createUploader('customizations/previews').single('preview'),
+  createUploader("customizations/previews").single("preview"),
+
   catchAsync(async (req, res, next) => {
-    if (!req.file) return next(new AppError('No preview image uploaded.', 400));
-    const customization = await Customization.findOneAndUpdate(
-      { _id: req.params.customizationId, user: req.user.id },
-      { previewImage: { url: req.file.path, publicId: req.file.filename } },
-      { new: true }
+
+    if (!req.file) {
+      return next(new AppError("No preview image uploaded.", 400));
+    }
+
+    const { side } = req.body;
+
+    const customization = await Customization.findOne({
+      _id: req.params.customizationId,
+      user: req.user.id,
+    });
+
+    if (!customization) {
+      return next(new AppError("Customization not found.", 404));
+    }
+
+    const design = customization.designs.find(
+      (item) => item.side === side
     );
-    if (!customization) return next(new AppError('Customization not found.', 404));
-    res.status(200).json({ success: true, data: { previewImage: customization.previewImage } });
+
+    if (!design) {
+      return next(new AppError("Invalid design side.", 400));
+    }
+
+    design.previewImage = {
+      url: req.file.path,
+      publicId: req.file.filename,
+    };
+
+    await customization.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        design,
+      },
+    });
+
   }),
 ];
 
 const getDesign = catchAsync(async (req, res, next) => {
   const customization = await Customization.findOne({
     _id: req.params.customizationId,
-    user: req.user.id,  
-  }).populate('product', 'name images printableArea');
-  if (!customization) return next(new AppError('Design not found.', 404));
-  res.status(200).json({ success: true, data: { customization } });
-});
+    user: req.user.id,
+  }).populate("product", "name images printableAreas");
 
+  if (!customization) {
+    return next(new AppError("Design not found.", 404));
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      customization,
+    },
+  });
+});
 const getUserDesigns = catchAsync(async (req, res) => {
   const designs = await Customization.find({ user: req.user.id })
     .populate('product', 'name images slug')

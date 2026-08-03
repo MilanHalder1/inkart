@@ -123,10 +123,27 @@ const productSchema = new mongoose.Schema({
   isCustomizable: { type: Boolean, default: false },
 
   // Printable area config for customization module
-  printableArea: {
-    x: Number, y: Number,
-    width: Number, height: Number,
-  },
+ printableAreas: [
+  {
+    side: {
+      type: String,
+      enum: [
+        "front",
+        "back",
+        "left",
+        "right"
+      ]
+    },
+
+    x: Number,
+
+    y: Number,
+
+    width: Number,
+
+    height: Number
+  }
+],
 
   ratingsAverage: { type: Number, default: 0, min: 0, max: 5, set: (v) => Math.round(v * 10) / 10 },
   ratingsCount: { type: Number, default: 0 },
