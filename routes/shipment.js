@@ -16,7 +16,7 @@ router.get(
 
 router.post('/check-delivery',checkDelivery);
 router.get(
-    '/:id/shipment',
+    '/:id/shipmentDetails',
     protect,
     shipmentDetails
 );
