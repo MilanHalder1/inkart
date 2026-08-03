@@ -279,7 +279,7 @@ const approveOrder = catchAsync(async (req, res, next) => {
 
   await sendOrderApprovedEmail(user, order);
 
-  // await attachShipmentToOrder(order);
+  await attachShipmentToOrder(order);
 
   res.status(200).json({
     success: true,
