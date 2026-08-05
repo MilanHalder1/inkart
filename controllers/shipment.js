@@ -3,7 +3,7 @@
 const Order = require('../models/Order');
 
 const {
-  trackShipment, getDeliveryEstimate, getShipmentDetails, generateLabel, cancelShipment, schedulePickup, generateManifest,
+  trackShipment, getDeliveryEstimate, getShipmentDetails, generateLabel, cancelShipment, schedulePickup, generateManifest,assignCourier
 } = require('../config/shiprocket');
 
 const catchAsync = require('../utilities/CatchAsync');
