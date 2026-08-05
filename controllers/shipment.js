@@ -125,7 +125,7 @@ const checkDelivery = catchAsync(
 
 const trackOrder = catchAsync(async (req, res, next) => {
 
-  const order = await Order.findById(req.params.orderId);
+  const order = await Order.findById(req.params.id);
 
   if (!order)
     return next(new AppError('Order not found', 404));
@@ -145,7 +145,7 @@ const trackOrder = catchAsync(async (req, res, next) => {
 });
 const getLabel = catchAsync(async (req, res, next) => {
 
-  const order = await Order.findById(req.params.orderId);
+  const order = await Order.findById(req.params.id);
 
   if (!order)
     return next(new AppError('Order not found', 404));
@@ -170,7 +170,7 @@ const getLabel = catchAsync(async (req, res, next) => {
 
 const getManifest = catchAsync(async (req, res, next) => {
 
-  const order = await Order.findById(req.params.orderId);
+  const order = await Order.findById(req.params.id);
 
   if (!order)
     return next(new AppError('Order not found', 404));
@@ -195,7 +195,7 @@ const getManifest = catchAsync(async (req, res, next) => {
 
 const pickupShipment = catchAsync(async (req, res, next) => {
 
-  const order = await Order.findById(req.params.orderId);
+  const order = await Order.findById(req.params.id);
 
   if (!order)
     return next(new AppError('Order not found', 404));
@@ -222,7 +222,7 @@ const pickupShipment = catchAsync(async (req, res, next) => {
 });
 const cancelOrderShipment = catchAsync(async (req, res, next) => {
 
-  const order = await Order.findById(req.params.orderId);
+  const order = await Order.findById(req.params.id);
 
   if (!order)
     return next(new AppError('Order not found', 404));
@@ -247,7 +247,7 @@ const cancelOrderShipment = catchAsync(async (req, res, next) => {
 
 const shipmentDetails = catchAsync(async (req, res, next) => {
 
-  const order = await Order.findById(req.params.orderId);
+  const order = await Order.findById(req.params.id);
 
   if (!order) {
     return next(new AppError('Order not found', 404));
