@@ -10,7 +10,14 @@ const User = require('../models/User');
 const razorpay = require('../config/razorpay');
 const AppError = require('../utilities/AppError');
 const catchAsync = require('../utilities/CatchAsync');
-const { createShipment } = require('../config/shiprocket');
+const {
+  createShipment,
+  assignCourier,
+  generateLabel,
+  generateManifest,
+  schedulePickup,
+  getShipmentDetails,
+} = require("../config/shiprocket");
 const { generateInvoice } = require('../utilities/invoice');
 
 const { sendOrderPlacedEmail, sendInvoiceEmail } = require('../config/order');
@@ -401,81 +408,169 @@ const getOrderDetails = catchAsync(async (req, res, next) => {
 
 //shipments
 
+
+
 const attachShipmentToOrder = async (order) => {
   try {
-    console.log("shipment order function")
-    if (order.shipment?.awb) return order; // ✅ already exists
+    console.log("🚀 Starting Shiprocket Flow");
 
+    if (order.shipment?.awb) {
+      console.log("Shipment already created.");
+      return order;
+    }
+
+    // ===========================
+    // STEP 1 : CREATE SHIPMENT
+    // ===========================
     const shipment = await createShipment(order);
-    console.log("shipment  checkout data", shipment)
+
+    console.log("Shipment Created :", shipment);
+
     order.shipment = {
-
-      shiprocketOrderId:
-        shipment.shiprocketOrderId,
-
-      shipmentId:
-        shipment.shipmentId,
-
-      awb:
-        shipment.awb,
-
-      courier:
-        shipment.courier,
-
-      trackingUrl:
-        shipment.trackingUrl,
-
-      status:
-        shipment.status,
-
-      manifestUrl:
-        shipment.manifestUrl || "",
-
-      labelUrl:
-        shipment.labelUrl || "",
-
-      pickupToken:
-        shipment.pickupToken || "",
-
-      estimatedDeliveryDate:
-        shipment.estimatedDeliveryDate
-          ? new Date(shipment.estimatedDeliveryDate)
-          : null,
-
+      shiprocketOrderId: shipment.shiprocketOrderId,
+      shipmentId: shipment.shipmentId,
+      awb: shipment.awb || "",
+      courier: shipment.courier || "",
+      trackingUrl: shipment.trackingUrl || "",
+      status: shipment.status || "NEW",
+      manifestUrl: shipment.manifestUrl || "",
+      labelUrl: shipment.labelUrl || "",
+      pickupToken: shipment.pickupToken || "",
+      estimatedDeliveryDate: shipment.estimatedDeliveryDate
+        ? new Date(shipment.estimatedDeliveryDate)
+        : null,
       lastTrackingUpdate: new Date(),
-
       lastShiprocketError: null,
     };
 
-    order.trackingNumber = shipment.awb_code;
+    await order.save();
+
+    // ======================================================
+    // IF AWB ALREADY GENERATED THEN NO NEED TO CONTINUE
+    // ======================================================
+    if (shipment.awb) {
+      console.log("AWB already generated.");
+      return order;
+    }
+
+    // ======================================================
+    // STEP 2 : ASSIGN COURIER
+    // ======================================================
+    console.log("Assigning Courier...");
+
+    await assignCourier(
+      shipment.shipmentId
+    );
+
+    // Wait few seconds for Shiprocket
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    // ======================================================
+    // STEP 3 : GET UPDATED DETAILS
+    // ======================================================
+    const details =
+      await getShipmentDetails(
+        shipment.shipmentId
+      );
+
+    console.log("Shipment Details", details);
+
+    const data =
+      details.data || details;
+
+    order.shipment.awb =
+      data.awb || "";
+
+    order.shipment.courier =
+      data.courier || "";
+
+    order.shipment.status =
+      data.status || order.shipment.status;
+
+    order.shipment.trackingUrl =
+      data.tracking_url || "";
+
+    order.shipment.estimatedDeliveryDate =
+      data.estimated_delivery_date
+        ? new Date(data.estimated_delivery_date)
+        : null;
+
+    await order.save();
+
+    // ======================================================
+    // STEP 4 : LABEL
+    // ======================================================
+    if (order.shipment.awb) {
+
+      const label =
+        await generateLabel(
+          shipment.shipmentId
+        );
+
+      order.shipment.labelUrl =
+        label.label_url || "";
+
+      await order.save();
+
+      console.log("Label Generated");
+    }
+
+    // ======================================================
+    // STEP 5 : MANIFEST
+    // ======================================================
+    if (order.shipment.awb) {
+
+      const manifest =
+        await generateManifest(
+          shipment.shipmentId
+        );
+
+      order.shipment.manifestUrl =
+        manifest.manifest_url || "";
+
+      await order.save();
+
+      console.log("Manifest Generated");
+    }
+
+    // ======================================================
+    // STEP 6 : PICKUP
+    // ======================================================
+    if (order.shipment.awb) {
+
+      const pickup =
+        await schedulePickup(
+          shipment.shipmentId
+        );
+
+      order.shipment.pickupToken =
+        pickup.pickup_token || "";
+
+      await order.save();
+
+      console.log("Pickup Scheduled");
+    }
+
+    return order;
+
+  } catch (err) {
+
+    console.log(err.response?.data || err.message);
+
+    order.shipment = {
+      ...order.shipment,
+      status: "failed",
+      lastTrackingUpdate: new Date(),
+      lastShiprocketError: JSON.stringify(
+        err.response?.data || err.message
+      ),
+    };
 
     await order.save();
 
     return order;
-
-  } 
-    catch (err) {
-
-      console.error(
-        "Shiprocket Error",
-        err.response?.data || err.message
-      );
-
-      order.shipment = {
-        status: "failed",
-        lastTrackingUpdate: new Date(),
-        lastShiprocketError:
-          JSON.stringify(
-            err.response?.data || err.message
-          ),
-      };
-
-      await order.save();
-
-      return order;
-    }
   }
-;
+};
 
 exports.createCODOrder = catchAsync(async (req, res, next) => {
   const order = await Order.create({
