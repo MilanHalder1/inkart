@@ -5,7 +5,8 @@ const router = require('express').Router();
 const { protect } = require('../middleware/Auth');
 const {
   trackMyOrder,
-  checkDelivery,shipmentDetails,getLabel,getManifest,pickupShipment,cancelOrderShipment
+  checkDelivery,shipmentDetails,getLabel,getManifest,pickupShipment,cancelOrderShipment,
+  syncShipment
 } = require('../controllers/shipment');
 
 router.get(
@@ -45,7 +46,11 @@ router.post(
     protect,
     cancelOrderShipment
 );
-
+router.post(
+    '/:id/sync-shipment',
+    protect,
+    syncShipment
+);
 
 
 module.exports = router;

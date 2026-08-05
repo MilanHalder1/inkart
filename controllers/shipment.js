@@ -302,6 +302,153 @@ const shipmentDetails = catchAsync(async (req, res, next) => {
   });
 
 });
+const syncShipment = catchAsync(async (req, res, next) => {
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order)
+        return next(new AppError("Order not found", 404));
+
+    if (!order.shipment?.shipmentId)
+        return next(new AppError("Shipment not created", 400));
+
+    // ----------------------------
+    // Assign courier if AWB missing
+    // ----------------------------
+
+    if (!order.shipment.awb) {
+
+        try {
+
+            await assignCourier(
+                order.shipment.shipmentId
+            );
+
+        } catch (err) {
+
+            console.log(err.response?.data);
+
+        }
+
+    }
+
+    // ----------------------------
+    // Get Latest Shipment Details
+    // ----------------------------
+
+    const details = await getShipmentDetails(
+        order.shipment.shipmentId
+    );
+
+    order.shipment.awb =
+        details.awb || order.shipment.awb;
+
+    order.shipment.courier =
+        details.courier || order.shipment.courier;
+
+    order.shipment.status =
+        details.status || order.shipment.status;
+
+    order.shipment.trackingUrl =
+        details.trackingUrl || order.shipment.trackingUrl;
+
+    order.shipment.estimatedDeliveryDate =
+        details.estimatedDeliveryDate
+            ? new Date(details.estimatedDeliveryDate)
+            : order.shipment.estimatedDeliveryDate;
+
+    order.shipment.lastTrackingUpdate =
+        new Date();
+
+    // ----------------------------
+    // Generate Label
+    // ----------------------------
+
+    if (
+        order.shipment.awb &&
+        !order.shipment.labelUrl
+    ) {
+
+        try {
+
+            const label =
+                await generateLabel(
+                    order.shipment.shipmentId
+                );
+
+            order.shipment.labelUrl =
+                label.label_url;
+
+        } catch (err) {
+
+            console.log(err.response?.data);
+
+        }
+
+    }
+
+    // ----------------------------
+    // Generate Manifest
+    // ----------------------------
+
+    if (
+        order.shipment.awb &&
+        !order.shipment.manifestUrl
+    ) {
+
+        try {
+
+            const manifest =
+                await generateManifest(
+                    order.shipment.shipmentId
+                );
+
+            order.shipment.manifestUrl =
+                manifest.manifest_url;
+
+        } catch (err) {
+
+            console.log(err.response?.data);
+
+        }
+
+    }
+
+    // ----------------------------
+    // Schedule Pickup
+    // ----------------------------
+
+    if (
+        order.shipment.awb &&
+        !order.shipment.pickupToken
+    ) {
+
+        try {
+
+            const pickup =
+                await schedulePickup(
+                    order.shipment.shipmentId
+                );
+
+            order.shipment.pickupToken =
+                pickup.pickup_token;
+
+        } catch (err) {
+
+            console.log(err.response?.data);
+
+        }
+
+    }
+
+    await order.save();
+
+    res.status(200).json({
+        success: true,
+        shipment: order.shipment
+    });
+
+});
 module.exports = {
-  trackMyOrder, checkDelivery, shipmentDetails, cancelOrderShipment, pickupShipment, getManifest, getLabel, trackOrder
+  trackMyOrder, checkDelivery, shipmentDetails, cancelOrderShipment, pickupShipment, getManifest, getLabel, trackOrder ,syncShipment
 };
