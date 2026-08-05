@@ -147,4 +147,36 @@ const hideOrderFromHistory = catchAsync(async (req, res, next) => {
     message: 'Order removed from history'
   });
 });
-module.exports = { getMyOrders, cancelMyOrder, hideOrderFromHistory }
+
+const deleteOrder = catchAsync(async (req, res, next) => {
+
+    const order = await Order.findOne({
+        _id: req.params.orderId,
+        user: req.user.id
+    });
+
+    if (!order) {
+        return next(new AppError("Order not found", 404));
+    }
+
+    // Optional: Prevent deletion of active orders
+    if (
+        ["processing", "shipped", "out_for_delivery"].includes(order.orderStatus)
+    ) {
+        return next(
+            new AppError(
+                "Cannot delete an active order.",
+                400
+            )
+        );
+    }
+
+    await Order.findByIdAndDelete(order._id);
+
+    res.status(200).json({
+        success: true,
+        message: "Order deleted permanently."
+    });
+
+});
+module.exports = { getMyOrders, cancelMyOrder, hideOrderFromHistory,deleteOrder }

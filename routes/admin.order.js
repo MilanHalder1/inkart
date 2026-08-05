@@ -10,7 +10,8 @@ const {
   approveOrder,
   resendOrderConfirmation,
   // confirmOrder,
-  getAdminOrderStatus
+  getAdminOrderStatus,
+  deleteOrderAdmin
 } = require('../controllers/admin.order');
 
 router.use(protect, restrictTo('admin', 'superadmin'));
@@ -29,5 +30,13 @@ router.get(
   protect,
   restrictTo('admin'),
   getAdminOrderStatus
+);
+
+
+router.delete(
+    "/:orderId",
+    protect,
+    restrictTo("admin"),
+    deleteOrderAdmin
 );
 module.exports = router; 

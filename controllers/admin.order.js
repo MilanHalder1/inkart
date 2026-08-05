@@ -401,4 +401,24 @@ const getAdminOrderStatus = catchAsync(async (req, res, next) => {
 });
 
 
-module.exports = { getAllOrders, getOrder, updateOrderStatus, setDeliveryEstimate, cancelOrder, markCODAsPaid, getCustomizedOrders, approveOrder, resendOrderConfirmation, getAdminOrderStatus };
+const deleteOrderAdmin = catchAsync(async (req, res, next) => {
+
+  const order = await Order.findById(req.params.orderId);
+
+  if (!order) {
+    return next(new AppError("Order not found", 404));
+  }
+
+  await Order.findByIdAndDelete(order._id);
+
+  res.status(200).json({
+    success: true,
+    message: "Order permanently deleted by admin."
+  });
+
+});
+
+module.exports = {
+  getAllOrders, getOrder, updateOrderStatus, setDeliveryEstimate, cancelOrder, markCODAsPaid, getCustomizedOrders, approveOrder, resendOrderConfirmation, getAdminOrderStatus, deleteOrderAdmin
+
+};
