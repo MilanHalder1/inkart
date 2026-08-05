@@ -412,19 +412,21 @@ const getOrderDetails = catchAsync(async (req, res, next) => {
 
 const attachShipmentToOrder = async (order) => {
   try {
+
     console.log("🚀 Starting Shiprocket Flow");
 
     if (order.shipment?.awb) {
-      console.log("Shipment already created.");
+      console.log("Shipment already exists.");
       return order;
     }
 
-    // ===========================
+    // ======================================================
     // STEP 1 : CREATE SHIPMENT
-    // ===========================
+    // ======================================================
+
     const shipment = await createShipment(order);
 
-    console.log("Shipment Created :", shipment);
+    console.log("Shipment Created", shipment);
 
     order.shipment = {
       shiprocketOrderId: shipment.shiprocketOrderId,
@@ -432,13 +434,11 @@ const attachShipmentToOrder = async (order) => {
       awb: shipment.awb || "",
       courier: shipment.courier || "",
       trackingUrl: shipment.trackingUrl || "",
-      status: shipment.status || "NEW",
-      manifestUrl: shipment.manifestUrl || "",
-      labelUrl: shipment.labelUrl || "",
-      pickupToken: shipment.pickupToken || "",
-      estimatedDeliveryDate: shipment.estimatedDeliveryDate
-        ? new Date(shipment.estimatedDeliveryDate)
-        : null,
+      status: shipment.status || "shipment_created",
+      manifestUrl: "",
+      labelUrl: "",
+      pickupToken: "",
+      estimatedDeliveryDate: null,
       lastTrackingUpdate: new Date(),
       lastShiprocketError: null,
     };
@@ -446,61 +446,86 @@ const attachShipmentToOrder = async (order) => {
     await order.save();
 
     // ======================================================
-    // IF AWB ALREADY GENERATED THEN NO NEED TO CONTINUE
+    // STEP 2 : ASSIGN COURIER
     // ======================================================
-    if (shipment.awb) {
-      console.log("AWB already generated.");
+
+    console.log("Assigning Courier...");
+
+    try {
+
+      await assignCourier(
+        shipment.shipmentId
+      );
+
+    } catch (err) {
+
+      order.shipment.lastShiprocketError =
+        JSON.stringify(
+          err.response?.data || err.message
+        );
+
+      await order.save();
+
       return order;
     }
 
     // ======================================================
-    // STEP 2 : ASSIGN COURIER
+    // STEP 3 : WAIT FOR SHIPROCKET
     // ======================================================
-    console.log("Assigning Courier...");
 
-    await assignCourier(
-      shipment.shipmentId
+    await new Promise(resolve =>
+      setTimeout(resolve, 5000)
     );
 
-    // Wait few seconds for Shiprocket
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    // ======================================================
+    // STEP 4 : FETCH UPDATED DETAILS
+    // ======================================================
 
-    // ======================================================
-    // STEP 3 : GET UPDATED DETAILS
-    // ======================================================
     const details =
       await getShipmentDetails(
         shipment.shipmentId
       );
 
-    console.log("Shipment Details", details);
-
-    const data =
-      details.data || details;
+    console.log(details);
 
     order.shipment.awb =
-      data.awb || "";
+      details.awb || "";
 
     order.shipment.courier =
-      data.courier || "";
+      details.courier || "";
 
     order.shipment.status =
-      data.status || order.shipment.status;
+      details.status || order.shipment.status;
 
     order.shipment.trackingUrl =
-      data.tracking_url || "";
+      details.trackingUrl || "";
 
     order.shipment.estimatedDeliveryDate =
-      data.estimated_delivery_date
-        ? new Date(data.estimated_delivery_date)
+      details.estimatedDeliveryDate
+        ? new Date(details.estimatedDeliveryDate)
         : null;
+
+    order.shipment.lastTrackingUpdate =
+      new Date();
 
     await order.save();
 
     // ======================================================
-    // STEP 4 : LABEL
+    // IF STILL NO AWB
     // ======================================================
-    if (order.shipment.awb) {
+
+    if (!order.shipment.awb) {
+
+      console.log("AWB not generated yet.");
+
+      return order;
+    }
+
+    // ======================================================
+    // STEP 5 : GENERATE LABEL
+    // ======================================================
+
+    try {
 
       const label =
         await generateLabel(
@@ -510,15 +535,16 @@ const attachShipmentToOrder = async (order) => {
       order.shipment.labelUrl =
         label.label_url || "";
 
-      await order.save();
+    } catch (err) {
 
-      console.log("Label Generated");
+      console.log("Label Error");
     }
 
     // ======================================================
-    // STEP 5 : MANIFEST
+    // STEP 6 : GENERATE MANIFEST
     // ======================================================
-    if (order.shipment.awb) {
+
+    try {
 
       const manifest =
         await generateManifest(
@@ -528,15 +554,16 @@ const attachShipmentToOrder = async (order) => {
       order.shipment.manifestUrl =
         manifest.manifest_url || "";
 
-      await order.save();
+    } catch (err) {
 
-      console.log("Manifest Generated");
+      console.log("Manifest Error");
     }
 
     // ======================================================
-    // STEP 6 : PICKUP
+    // STEP 7 : SCHEDULE PICKUP
     // ======================================================
-    if (order.shipment.awb) {
+
+    try {
 
       const pickup =
         await schedulePickup(
@@ -546,16 +573,25 @@ const attachShipmentToOrder = async (order) => {
       order.shipment.pickupToken =
         pickup.pickup_token || "";
 
-      await order.save();
+    } catch (err) {
 
-      console.log("Pickup Scheduled");
+      console.log("Pickup Error");
     }
+
+    order.shipment.lastTrackingUpdate =
+      new Date();
+
+    await order.save();
+
+    console.log("✅ Shiprocket Flow Completed");
 
     return order;
 
   } catch (err) {
 
-    console.log(err.response?.data || err.message);
+    console.log(
+      err.response?.data || err.message
+    );
 
     order.shipment = {
       ...order.shipment,

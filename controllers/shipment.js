@@ -257,37 +257,44 @@ const shipmentDetails = catchAsync(async (req, res, next) => {
     return next(new AppError('Shipment not created yet', 400));
   }
 
-  const shipment = await getShipmentDetails(
-    order.shipment.shipmentId
-  );
 
+   const details = await getShipmentDetails(
+      order.shipment.shipmentId
+    );
   // Optional: Update latest values in DB
-  if (shipment) {
+ 
+
+ 
+
+    order.shipment.awb = details.awb || order.shipment.awb;
+
+    order.shipment.courier =
+      details.courier || order.shipment.courier;
 
     order.shipment.status =
-      shipment.status || order.shipment.status;
+      details.status || order.shipment.status;
+
+    order.shipment.trackingUrl =
+      details.trackingUrl || order.shipment.trackingUrl;
+
+    order.shipment.labelUrl =
+      details.labelUrl || order.shipment.labelUrl;
+
+    order.shipment.manifestUrl =
+      details.manifestUrl || order.shipment.manifestUrl;
+
+    order.shipment.pickupToken =
+      details.pickupToken || order.shipment.pickupToken;
+
+    order.shipment.estimatedDeliveryDate =
+      details.estimatedDeliveryDate
+        ? new Date(details.estimatedDeliveryDate)
+        : order.shipment.estimatedDeliveryDate;
 
     order.shipment.lastTrackingUpdate = new Date();
 
-    if (shipment.awb_code) {
-      order.shipment.awb = shipment.awb_code;
-    }
-
-    if (shipment.courier_name) {
-      order.shipment.courier = shipment.courier_name;
-    }
-
-    if (shipment.tracking_url) {
-      order.shipment.trackingUrl = shipment.tracking_url;
-    }
-
-    if (shipment.estimated_delivery_date) {
-      order.shipment.estimatedDeliveryDate =
-        shipment.estimated_delivery_date;
-    }
-
     await order.save();
-  }
+  
 
   res.status(200).json({
     success: true,

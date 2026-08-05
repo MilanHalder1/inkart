@@ -192,7 +192,55 @@ const createShipment = async (order) => {
     throw err;
   }
 };
+// ===============================
+// ASSIGN COURIER
+// ===============================
 
+const assignCourier = async (
+  shipmentId
+) => {
+
+  try {
+
+    const authToken =
+      await getToken();
+
+    const res = await axios.post(
+
+      `${process.env.SHIPROCKET_BASE_URL}/courier/assign/awb`,
+
+      {
+        shipment_id: shipmentId
+      },
+
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json"
+        }
+      }
+
+    );
+
+    console.log(
+      "Courier Assigned",
+      res.data
+    );
+
+    return res.data;
+
+  }
+  catch (err) {
+
+    console.log(
+      "Assign Courier Error",
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
+
+};
 
 // 📦 TRACK SHIPMENT
 const trackShipment = async (awb) => {
@@ -333,23 +381,44 @@ const generateLabel = async (
   return res.data;
 };
 const getShipmentDetails = async (shipmentId) => {
+  try {
+    const authToken = await getToken();
 
-  const authToken = await getToken();
-
-  const res = await axios.get(
-    `${process.env.SHIPROCKET_BASE_URL}/shipments/${shipmentId}`,
-    {
-      headers: {
-        Authorization: `Bearer ${authToken}`
+    const res = await axios.get(
+      `${process.env.SHIPROCKET_BASE_URL}/shipments/${shipmentId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
       }
-    }
-  );
+    );
 
-  return res.data;
+    const shipment = res.data.data || res.data;
+
+    return {
+      shipmentId: shipment.id,
+      shiprocketOrderId: shipment.order_id,
+      awb: shipment.awb,
+      courier: shipment.courier,
+      status: shipment.status,
+      trackingUrl: shipment.tracking_url,
+      manifestUrl: shipment.manifest_url,
+      labelUrl: shipment.label_url,
+      pickupToken: shipment.pickup_token_number,
+      estimatedDeliveryDate: shipment.estimated_delivery_date,
+      raw: shipment,
+    };
+  } catch (err) {
+    console.error(
+      "❌ Get Shipment Details Error",
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
 };
-
 module.exports = {
   createShipment,
   trackShipment,
-  getDeliveryEstimate, cancelShipment, generateLabel, generateManifest, schedulePickup, getShipmentDetails
+  getDeliveryEstimate, cancelShipment, generateLabel, generateManifest, schedulePickup, getShipmentDetails, assignCourier
 };
