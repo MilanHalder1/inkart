@@ -45,7 +45,7 @@ const generateInvoice = async (order) => {
 
       // Company name
       doc.fontSize(13).font('Helvetica-Bold').fillColor(primary)
-         .text('INKART', PAD + 38, hTop + 2);
+         .text('Colourstreak India Private Limited', PAD + 38, hTop + 2);
 
       // Address lines
       doc.fontSize(8).font('Helvetica').fillColor('#374151')
