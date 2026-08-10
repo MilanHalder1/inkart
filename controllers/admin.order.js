@@ -48,7 +48,7 @@ const getAllOrders = catchAsync(async (req, res) => {
       .populate({
         path: "items.customizationId",
         select:
-          "previewImage backgroundImage layers canvasWidth canvasHeight status createdAt updatedAt"
+          "designs status createdAt updatedAt product user",
       }),
 
     Order.countDocuments(filter),
@@ -57,24 +57,88 @@ const getAllOrders = catchAsync(async (req, res) => {
   const formattedOrders = orders.map((order) => {
     const obj = order.toObject();
 
-    obj.items = obj.items.map((item) => ({
-      ...item,
+    obj.items = obj.items.map((item) => {
 
-      color: item.selectedColor || null,
+      const customization = item.customizationId;
 
-      quantity: item.quantity,
+      // Find front and back designs
+      const frontDesign = customization?.designs?.find(
+        (design) => design.side === "front"
+      );
 
-      sizeBreakdown:
-        item.selectedSizes && item.selectedSizes.length
-          ? item.selectedSizes
-          : [],
+      const backDesign = customization?.designs?.find(
+        (design) => design.side === "back"
+      );
 
-      totalSizes:
-        item.selectedSizes?.reduce(
-          (sum, s) => sum + s.quantity,
-          0
-        ) || item.quantity,
-    }));
+      return {
+        ...item,
+
+        color: item.selectedColor || null,
+
+        quantity: item.quantity,
+
+        sizeBreakdown:
+          item.selectedSizes?.length
+            ? item.selectedSizes
+            : [],
+
+        totalSizes:
+          item.selectedSizes?.reduce(
+            (sum, s) => sum + s.quantity,
+            0
+          ) || item.quantity,
+
+        // ============================
+        // CUSTOMIZATION
+        // ============================
+
+        customization: customization
+          ? {
+            _id: customization._id,
+
+            status: customization.status,
+
+            front: frontDesign
+              ? {
+                previewImage:
+                  frontDesign.previewImage?.url || null,
+
+                backgroundImage:
+                  frontDesign.backgroundImage?.url || null,
+
+                layers:
+                  frontDesign.layers || [],
+
+                canvasWidth:
+                  frontDesign.canvasWidth || null,
+
+                canvasHeight:
+                  frontDesign.canvasHeight || null,
+              }
+              : null,
+
+            back: backDesign
+              ? {
+                previewImage:
+                  backDesign.previewImage?.url || null,
+
+                backgroundImage:
+                  backDesign.backgroundImage?.url || null,
+
+                layers:
+                  backDesign.layers || [],
+
+                canvasWidth:
+                  backDesign.canvasWidth || null,
+
+                canvasHeight:
+                  backDesign.canvasHeight || null,
+              }
+              : null,
+          }
+          : null,
+      };
+    });
 
     return obj;
   });
@@ -104,16 +168,27 @@ const getOrder = catchAsync(async (req, res, next) => {
     .populate({
       path: "items.customizationId",
       select:
-        "previewImage backgroundImage layers canvasWidth canvasHeight status createdAt updatedAt",
+        "designs status createdAt updatedAt product user",
     });
 
   if (!order)
     return next(new AppError("Order not found.", 404));
 
-  const formattedOrder = order.toObject();
+ const formattedOrder = order.toObject();
 
-  formattedOrder.items = formattedOrder.items.map((item) => ({
+formattedOrder.items = formattedOrder.items.map((item) => {
 
+  const customization = item.customizationId;
+
+  const frontDesign = customization?.designs?.find(
+    (design) => design.side === "front"
+  );
+
+  const backDesign = customization?.designs?.find(
+    (design) => design.side === "back"
+  );
+
+  return {
     ...item,
 
     color: item.selectedColor || null,
@@ -121,7 +196,7 @@ const getOrder = catchAsync(async (req, res, next) => {
     quantity: item.quantity,
 
     sizeBreakdown:
-      item.selectedSizes && item.selectedSizes.length
+      item.selectedSizes?.length
         ? item.selectedSizes
         : [],
 
@@ -131,7 +206,53 @@ const getOrder = catchAsync(async (req, res, next) => {
         0
       ) || item.quantity,
 
-  }));
+    customization: customization
+      ? {
+          _id: customization._id,
+
+          status: customization.status,
+
+          front: frontDesign
+            ? {
+                previewImage:
+                  frontDesign.previewImage?.url || null,
+
+                backgroundImage:
+                  frontDesign.backgroundImage?.url || null,
+
+                layers:
+                  frontDesign.layers || [],
+
+                canvasWidth:
+                  frontDesign.canvasWidth || null,
+
+                canvasHeight:
+                  frontDesign.canvasHeight || null,
+              }
+            : null,
+
+          back: backDesign
+            ? {
+                previewImage:
+                  backDesign.previewImage?.url || null,
+
+                backgroundImage:
+                  backDesign.backgroundImage?.url || null,
+
+                layers:
+                  backDesign.layers || [],
+
+                canvasWidth:
+                  backDesign.canvasWidth || null,
+
+                canvasHeight:
+                  backDesign.canvasHeight || null,
+              }
+            : null,
+        }
+      : null,
+  };
+});
 
   res.status(200).json({
     success: true,

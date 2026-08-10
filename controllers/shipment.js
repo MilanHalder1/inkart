@@ -14,10 +14,8 @@ const AppError = require('../utilities/AppError');
 // ✅ TRACK ORDER
 const trackMyOrder = catchAsync(async (req, res, next) => {
 
-  const order = await Order.findOne({
-    _id: req.params.id,
-    user: req.user.id,
-  });
+   const order = await Order.findById(req.params.id);
+
 
   if (!order) {
     return next(
