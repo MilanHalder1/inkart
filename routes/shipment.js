@@ -55,6 +55,7 @@ router.post(
 
 router.get(
   '/ndr',
+   protect,
   restrictTo('admin',"superadmin"),
   getAllNDR
 );
@@ -63,6 +64,7 @@ router.get(
 // Get NDR of particular order
 router.get(
   '/:orderId/ndr',
+   protect,
   restrictTo('admin',"superadmin"),
   getOrderNDR
 );
@@ -71,6 +73,7 @@ router.get(
 // Reattempt
 router.post(
   '/:orderId/ndr/reattempt',
+  protect,
   restrictTo('admin',"superadmin"),
   reattemptNDR
 );
@@ -79,6 +82,7 @@ router.post(
 // RTO
 router.post(
   '/:orderId/ndr/rto',
+  protect,
   restrictTo('admin',"superadmin"),
   rtoNDR
 );
