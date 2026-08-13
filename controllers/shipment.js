@@ -114,8 +114,7 @@ const checkPincode = catchAsync(async (req, res, next) => {
         name: fastestCourier.courier_name,
 
         estimatedDeliveryDays:
-          fastestCourier.estimated_delivery_days,
-
+          Number(fastestCourier.estimated_delivery_days || 0) + 2,
         rate:
           fastestCourier.rate,
 
