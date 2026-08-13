@@ -417,6 +417,150 @@ const getShipmentDetails = async (shipmentId) => {
     throw err;
   }
 };
+
+
+//NDR 
+
+const getNDRShipments = async ({
+  page = 1,
+  perPage = 20,
+  search = '',
+  from = '',
+  to = '',
+} = {}) => {
+
+  const authToken = await getToken();
+
+  const params = {
+    page,
+    per_page: perPage,
+  };
+
+  if (search) params.search = search;
+  if (from) params.from = from;
+  if (to) params.to = to;
+
+  try {
+
+    const res = await axios.get(
+      `${process.env.SHIPROCKET_BASE_URL}/ndr/all`,
+      {
+        params,
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    return res.data;
+
+  } catch (err) {
+
+    console.error(
+      '❌ Get NDR Shipments Error:',
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
+};
+const getNDRDetails = async (awb) => {
+
+  const authToken = await getToken();
+
+  try {
+
+    const res = await axios.get(
+      `${process.env.SHIPROCKET_BASE_URL}/ndr/${awb}`,
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    return res.data;
+
+  } catch (err) {
+
+    console.error(
+      '❌ Get NDR Details Error:',
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
+};
+const takeNDRAction = async ({
+  awb,
+  action,
+  comments,
+  phone,
+  address1,
+  address2,
+  deferredDate,
+}) => {
+
+  const authToken = await getToken();
+
+  const payload = {
+    action,
+    comments,
+  };
+
+  if (phone) {
+    payload.phone = phone;
+  }
+
+  if (address1) {
+    payload.address1 = address1;
+  }
+
+  if (address2) {
+    payload.address2 = address2;
+  }
+
+  if (deferredDate) {
+    payload.deferred_date = deferredDate;
+  }
+
+  try {
+
+    console.log(
+      '📦 Shiprocket NDR Action:',
+      JSON.stringify(payload, null, 2)
+    );
+
+    const res = await axios.post(
+      `${process.env.SHIPROCKET_BASE_URL}/ndr/${awb}/action`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    console.log(
+      '✅ NDR Action Successful:',
+      res.data
+    );
+
+    return res.data;
+
+  } catch (err) {
+
+    console.error(
+      '❌ NDR Action Error:',
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
+};
 module.exports = {
   createShipment,
   trackShipment,

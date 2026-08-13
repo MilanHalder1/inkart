@@ -68,6 +68,13 @@ const shippingAddressSchema = new mongoose.Schema({
   country: { type: String, default: 'India' },
 }, { _id: false });
 
+
+
+
+
+
+
+
 const orderSchema = new mongoose.Schema({
   orderNumber: { type: String, unique: true, index: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -122,18 +129,22 @@ const orderSchema = new mongoose.Schema({
   },
 
   shipmentStatus: {
-    type: String,
-    enum: [
-      'not_created',
-      'shipment_created',
-      'pickup_scheduled',
-      'in_transit',
-      'out_for_delivery',
-      'delivered',
-      'cancelled'
-    ],
-    default: 'not_created'
-  },
+  type: String,
+  enum: [
+    'not_created',
+    'shipment_created',
+    'courier_assigned',
+    'pickup_scheduled',
+    'in_transit',
+    'out_for_delivery',
+    'ndr',
+    'reattempt_scheduled',
+    'delivered',
+    'rto',
+    'cancelled'
+  ],
+  default: 'not_created'
+},
   statusHistory: [{
     status: String,
     timestamp: { type: Date, default: Date.now },
@@ -171,6 +182,77 @@ const orderSchema = new mongoose.Schema({
     labelUrl: String,
 
     invoiceUrl: String,
+    ndr: {
+      isNdr: {
+        type: Boolean,
+        default: false,
+
+      },
+      reason: {
+        type: String,
+        default: null,
+
+      },
+      remark: {
+        type: String,
+        default: null,
+
+      },
+      action: {
+        type: String,
+        enum: [
+          'none',
+          'reattempt',
+          'change_address',
+          'change_phone',
+          'cancel',
+          'return_to_origin'
+        ],
+        default: 'none',
+
+      },
+      attemptCount: {
+        type: Number,
+        default: 0,
+
+      },
+      lastAttemptAt: {
+        type: Date,
+        default: null,
+
+      },
+      nextAttemptDate: {
+        type: Date,
+        default: null,
+
+      },
+      resolved: {
+        type: Boolean,
+        default: false,
+
+      },
+      resolvedAt: {
+        type: Date,
+        default: null,
+
+      },
+      history: [
+        {
+          attemptNumber: Number,
+          reason: String,
+          remark: String,
+          action: String,
+          attemptDate: {
+            type: Date,
+            default: Date.now,
+
+          },
+          nextAttemptDate: Date,
+          status: String,
+
+        }
+      ]
+    }
   },
   cancelReason: String,
   cancelledAt: Date,
@@ -204,6 +286,7 @@ const orderSchema = new mongoose.Schema({
 }, {
   timestamps: true,
 });
+
 
 orderSchema.index({ createdAt: -1 });
 orderSchema.index({ user: 1, orderStatus: 1 });

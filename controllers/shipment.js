@@ -447,6 +447,195 @@ const syncShipment = catchAsync(async (req, res, next) => {
     });
 
 });
+
+const getAllNDR = catchAsync(async (req, res, next) => {
+
+  const {
+    page = 1,
+    limit = 20,
+    search,
+    from,
+    to,
+  } = req.query;
+
+  const data = await getNDRShipments({
+    page: Number(page),
+    perPage: Number(limit),
+    search,
+    from,
+    to,
+  });
+
+  res.status(200).json({
+    success: true,
+    data,
+  });
+
+});
+const getOrderNDR = catchAsync(async (req, res, next) => {
+
+  const order = await Order.findById(req.params.orderId);
+
+  if (!order) {
+    return next(
+      new AppError('Order not found', 404)
+    );
+  }
+
+  if (!order.shipment?.awb) {
+    return next(
+      new AppError('Shipment AWB not available', 400)
+    );
+  }
+
+  const data = await getNDRDetails(
+    order.shipment.awb
+  );
+
+  res.status(200).json({
+    success: true,
+    data,
+  });
+
+});
+const reattemptNDR = catchAsync(async (req, res, next) => {
+
+  const order = await Order.findById(
+    req.params.orderId
+  );
+
+  if (!order) {
+    return next(
+      new AppError('Order not found', 404)
+    );
+  }
+
+  if (!order.shipment?.awb) {
+    return next(
+      new AppError('Shipment AWB not available', 400)
+    );
+  }
+
+  const {
+    comments,
+    phone,
+    address1,
+    address2,
+    deferredDate,
+  } = req.body;
+
+  if (!comments) {
+    return next(
+      new AppError(
+        'Comments are required for NDR reattempt',
+        400
+      )
+    );
+  }
+
+  const result = await takeNDRAction({
+
+    awb: order.shipment.awb,
+
+    action: 're-attempt',
+
+    comments,
+
+    phone,
+
+    address1,
+
+    address2,
+
+    deferredDate,
+  });
+
+  // Update our DB
+
+  order.shipment.lastTrackingUpdate =
+    new Date();
+
+  order.shipment.lastShiprocketError = null;
+
+  order.statusHistory.push({
+
+    status: 'reattempt_requested',
+
+    note:
+      `NDR reattempt requested. ${comments}`,
+
+  });
+
+  await order.save();
+
+  res.status(200).json({
+
+    success: true,
+
+    message:
+      'NDR reattempt requested successfully',
+
+    data: result,
+
+  });
+
+});
+
+const rtoNDR = catchAsync(async (req, res, next) => {
+
+  const order = await Order.findById(
+    req.params.orderId
+  );
+
+  if (!order) {
+    return next(
+      new AppError('Order not found', 404)
+    );
+  }
+
+  if (!order.shipment?.awb) {
+    return next(
+      new AppError('Shipment AWB not available', 400)
+    );
+  }
+
+  const result = await takeNDRAction({
+
+    awb: order.shipment.awb,
+
+    action: 'return',
+
+    comments:
+      req.body.comments ||
+      'Customer requested return after failed delivery attempt',
+
+  });
+
+  order.statusHistory.push({
+
+    status: 'rto_requested',
+
+    note:
+      req.body.comments ||
+      'RTO requested from NDR',
+
+  });
+
+  await order.save();
+
+  res.status(200).json({
+
+    success: true,
+
+    message:
+      'RTO requested successfully',
+
+    data: result,
+
+  });
+
+});
+
 module.exports = {
-  trackMyOrder, checkDelivery, shipmentDetails, cancelOrderShipment, pickupShipment, getManifest, getLabel, trackOrder ,syncShipment
+  trackMyOrder, checkDelivery, shipmentDetails, cancelOrderShipment, pickupShipment, getManifest, getLabel, trackOrder ,syncShipment,reattemptNDR,getAllNDR,getOrderNDR,rtoNDR
 };
