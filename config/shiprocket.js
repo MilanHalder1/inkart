@@ -564,5 +564,6 @@ const takeNDRAction = async ({
 module.exports = {
   createShipment,
   trackShipment,
-  getDeliveryEstimate, cancelShipment, generateLabel, generateManifest, schedulePickup, getShipmentDetails, assignCourier
+  getDeliveryEstimate, cancelShipment, generateLabel, generateManifest, schedulePickup, getShipmentDetails, assignCourier,getNDRDetails,getNDRShipments
+  ,takeNDRAction
 };
