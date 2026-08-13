@@ -4,9 +4,9 @@ const router = require('express').Router();
 
 const { protect, restrictTo } = require('../middleware/Auth');
 const {
-  trackMyOrder,
-  checkDelivery,shipmentDetails,getLabel,getManifest,pickupShipment,cancelOrderShipment,
-  syncShipment,getAllNDR,getOrderNDR,rtoNDR,reattemptNDR
+  trackMyOrder,shipmentDetails,getLabel,getManifest,pickupShipment,cancelOrderShipment,
+  syncShipment,getAllNDR,getOrderNDR,rtoNDR,reattemptNDR,
+  checkPincode
 } = require('../controllers/shipment');
 
 
@@ -16,7 +16,7 @@ router.get(
   trackMyOrder
 );
 
-router.post('/check-delivery',checkDelivery);
+router.post('/check-delivery',protect,checkPincode  );
 router.get(
     '/:id/shipmentDetails',
     protect,

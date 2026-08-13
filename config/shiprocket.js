@@ -293,31 +293,53 @@ const schedulePickup = async (
   return res.data;
 };
 
-const getDeliveryEstimate = async ({
+const checkPincodeServiceability = async ({
   deliveryPincode,
   weight = 0.5,
   cod = false,
 }) => {
-  const authToken = await getToken();
 
-  const res = await axios.get(
-    `${process.env.SHIPROCKET_BASE_URL}/courier/serviceability/`,
-    {
-      params: {
-        pickup_postcode: '700006', // Your warehouse pincode
-        delivery_postcode: deliveryPincode,
-        weight,
-        cod: cod ? 1 : 0,
-      },
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
+  try {
+
+    const authToken = await getToken();
+
+    const pickupPincode =
+      process.env.SHIPROCKET_PICKUP_PINCODE;
+
+    if (!pickupPincode) {
+      throw new Error(
+        'SHIPROCKET_PICKUP_PINCODE is not configured'
+      );
     }
-  );
 
-  return res.data;
+    const res = await axios.get(
+      `${process.env.SHIPROCKET_BASE_URL}/courier/serviceability/`,
+      {
+        params: {
+          pickup_postcode: pickupPincode,
+          delivery_postcode: deliveryPincode,
+          weight,
+          cod: cod ? 1 : 0,
+        },
+
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      }
+    );
+
+    return res.data;
+
+  } catch (err) {
+
+    console.error(
+      '❌ Pincode Serviceability Error:',
+      err.response?.data || err.message
+    );
+
+    throw err;
+  }
 };
-
 
 const cancelShipment = async (
   shipmentId
@@ -564,6 +586,6 @@ const takeNDRAction = async ({
 module.exports = {
   createShipment,
   trackShipment,
-  getDeliveryEstimate, cancelShipment, generateLabel, generateManifest, schedulePickup, getShipmentDetails, assignCourier,getNDRDetails,getNDRShipments
+  checkPincodeServiceability, cancelShipment, generateLabel, generateManifest, schedulePickup, getShipmentDetails, assignCourier,getNDRDetails,getNDRShipments
   ,takeNDRAction
 };

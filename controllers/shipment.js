@@ -3,7 +3,7 @@
 const Order = require('../models/Order');
 
 const {
-  trackShipment, getDeliveryEstimate, getShipmentDetails, generateLabel, cancelShipment, schedulePickup, generateManifest,assignCourier,getNDRDetails,getNDRShipments,takeNDRAction
+  trackShipment, checkPincodeServiceability, getShipmentDetails, generateLabel, cancelShipment, schedulePickup, generateManifest, assignCourier, getNDRDetails, getNDRShipments, takeNDRAction
 } = require('../config/shiprocket');
 
 const catchAsync = require('../utilities/CatchAsync');
@@ -14,7 +14,7 @@ const AppError = require('../utilities/AppError');
 // ✅ TRACK ORDER
 const trackMyOrder = catchAsync(async (req, res, next) => {
 
-   const order = await Order.findById(req.params.id);
+  const order = await Order.findById(req.params.id);
 
 
   if (!order) {
@@ -46,81 +46,90 @@ const trackMyOrder = catchAsync(async (req, res, next) => {
     },
   });
 });
-const checkDelivery = catchAsync(
-  async (req, res, next) => {
+const checkPincode = catchAsync(async (req, res, next) => {
 
-    const {
-      pincode,
-      weight = 0.5,
-      cod = false,
-    } = req.body;
+  const {
+    pincode,
+    weight = 0.5,
+    cod = false
+  } = req.body;
 
-    if (!pincode) {
-      return next(
-        new AppError(
-          'Pincode is required',
-          400
-        )
-      );
-    }
-
-    const estimate =
-      await getDeliveryEstimate({
-        deliveryPincode: pincode,
-        weight,
-        cod,
-      });
-
-    const couriers =
-      estimate.data
-        ?.available_courier_companies || [];
-
-    if (!couriers.length) {
-      return next(
-        new AppError(
-          'Delivery not available for this pincode',
-          400
-        )
-      );
-    }
-
-    // Fastest courier
-    const fastest = couriers.sort(
-      (a, b) =>
-        a.estimated_delivery_days -
-        b.estimated_delivery_days
-    )[0];
-
-    const packingDays = 2;
-
-    const courierDays = Number(
-      fastest.estimated_delivery_days || 0
+  if (!pincode) {
+    return next(
+      new AppError('Delivery pincode is required', 400)
     );
-
-    const estimatedDays =
-      courierDays + packingDays;
-
-    const estimatedDate = new Date();
-
-    estimatedDate.setDate(
-      estimatedDate.getDate() + estimatedDays
-    );
-
-    res.status(200).json({
-      success: true,
-      data: {
-        courier: fastest.courier_name,
-        estimatedDays,
-        estimatedDate,
-        packingDays,
-        courierDays:
-          fastest.estimated_delivery_days,
-        message: `Delivered in ${estimatedDays} days`,
-      },
-    });
   }
-);
 
+  if (!/^\d{6}$/.test(String(pincode))) {
+    return next(
+      new AppError(
+        'Please enter a valid 6 digit pincode',
+        400
+      )
+    );
+  }
+
+  const result = await checkPincodeServiceability({
+    deliveryPincode: pincode,
+    weight,
+    cod
+  });
+
+  const couriers =
+    result?.data?.available_courier_companies || [];
+
+  if (!couriers.length) {
+
+    return res.status(200).json({
+      success: true,
+      deliverable: false,
+      message:
+        'Delivery is not available for this pincode',
+      data: {
+        pincode
+      }
+    });
+
+  }
+
+  const fastestCourier = [...couriers].sort(
+    (a, b) =>
+      Number(a.estimated_delivery_days || 999) -
+      Number(b.estimated_delivery_days || 999)
+  )[0];
+
+  res.status(200).json({
+
+    success: true,
+
+    deliverable: true,
+
+    data: {
+
+      pincode,
+
+      courierCount: couriers.length,
+
+      courier: {
+        name: fastestCourier.courier_name,
+
+        estimatedDeliveryDays:
+          fastestCourier.estimated_delivery_days,
+
+        rate:
+          fastestCourier.rate,
+
+        codAvailable:
+          fastestCourier.cod === 1 ||
+          fastestCourier.cod === true
+      },
+
+      couriers
+    }
+
+  });
+
+});
 const trackOrder = catchAsync(async (req, res, next) => {
 
   const order = await Order.findById(req.params.id);
@@ -256,43 +265,43 @@ const shipmentDetails = catchAsync(async (req, res, next) => {
   }
 
 
-   const details = await getShipmentDetails(
-      order.shipment.shipmentId
-    );
+  const details = await getShipmentDetails(
+    order.shipment.shipmentId
+  );
   // Optional: Update latest values in DB
- 
 
- 
 
-    order.shipment.awb = details.awb || order.shipment.awb;
 
-    order.shipment.courier =
-      details.courier || order.shipment.courier;
 
-    order.shipment.status =
-      details.status || order.shipment.status;
+  order.shipment.awb = details.awb || order.shipment.awb;
 
-    order.shipment.trackingUrl =
-      details.trackingUrl || order.shipment.trackingUrl;
+  order.shipment.courier =
+    details.courier || order.shipment.courier;
 
-    order.shipment.labelUrl =
-      details.labelUrl || order.shipment.labelUrl;
+  order.shipment.status =
+    details.status || order.shipment.status;
 
-    order.shipment.manifestUrl =
-      details.manifestUrl || order.shipment.manifestUrl;
+  order.shipment.trackingUrl =
+    details.trackingUrl || order.shipment.trackingUrl;
 
-    order.shipment.pickupToken =
-      details.pickupToken || order.shipment.pickupToken;
+  order.shipment.labelUrl =
+    details.labelUrl || order.shipment.labelUrl;
 
-    order.shipment.estimatedDeliveryDate =
-      details.estimatedDeliveryDate
-        ? new Date(details.estimatedDeliveryDate)
-        : order.shipment.estimatedDeliveryDate;
+  order.shipment.manifestUrl =
+    details.manifestUrl || order.shipment.manifestUrl;
 
-    order.shipment.lastTrackingUpdate = new Date();
+  order.shipment.pickupToken =
+    details.pickupToken || order.shipment.pickupToken;
 
-    await order.save();
-  
+  order.shipment.estimatedDeliveryDate =
+    details.estimatedDeliveryDate
+      ? new Date(details.estimatedDeliveryDate)
+      : order.shipment.estimatedDeliveryDate;
+
+  order.shipment.lastTrackingUpdate = new Date();
+
+  await order.save();
+
 
   res.status(200).json({
     success: true,
@@ -302,149 +311,149 @@ const shipmentDetails = catchAsync(async (req, res, next) => {
 });
 const syncShipment = catchAsync(async (req, res, next) => {
 
-    const order = await Order.findById(req.params.id);
+  const order = await Order.findById(req.params.id);
 
-    if (!order)
-        return next(new AppError("Order not found", 404));
+  if (!order)
+    return next(new AppError("Order not found", 404));
 
-    if (!order.shipment?.shipmentId)
-        return next(new AppError("Shipment not created", 400));
+  if (!order.shipment?.shipmentId)
+    return next(new AppError("Shipment not created", 400));
 
-    // ----------------------------
-    // Assign courier if AWB missing
-    // ----------------------------
+  // ----------------------------
+  // Assign courier if AWB missing
+  // ----------------------------
 
-    if (!order.shipment.awb) {
+  if (!order.shipment.awb) {
 
-        try {
+    try {
 
-            await assignCourier(
-                order.shipment.shipmentId
-            );
-
-        } catch (err) {
-
-            console.log(err.response?.data);
-
-        }
-
-    }
-
-    // ----------------------------
-    // Get Latest Shipment Details
-    // ----------------------------
-
-    const details = await getShipmentDetails(
+      await assignCourier(
         order.shipment.shipmentId
-    );
+      );
 
-    order.shipment.awb =
-        details.awb || order.shipment.awb;
+    } catch (err) {
 
-    order.shipment.courier =
-        details.courier || order.shipment.courier;
-
-    order.shipment.status =
-        details.status || order.shipment.status;
-
-    order.shipment.trackingUrl =
-        details.trackingUrl || order.shipment.trackingUrl;
-
-    order.shipment.estimatedDeliveryDate =
-        details.estimatedDeliveryDate
-            ? new Date(details.estimatedDeliveryDate)
-            : order.shipment.estimatedDeliveryDate;
-
-    order.shipment.lastTrackingUpdate =
-        new Date();
-
-    // ----------------------------
-    // Generate Label
-    // ----------------------------
-
-    if (
-        order.shipment.awb &&
-        !order.shipment.labelUrl
-    ) {
-
-        try {
-
-            const label =
-                await generateLabel(
-                    order.shipment.shipmentId
-                );
-
-            order.shipment.labelUrl =
-                label.label_url;
-
-        } catch (err) {
-
-            console.log(err.response?.data);
-
-        }
+      console.log(err.response?.data);
 
     }
 
-    // ----------------------------
-    // Generate Manifest
-    // ----------------------------
+  }
 
-    if (
-        order.shipment.awb &&
-        !order.shipment.manifestUrl
-    ) {
+  // ----------------------------
+  // Get Latest Shipment Details
+  // ----------------------------
 
-        try {
+  const details = await getShipmentDetails(
+    order.shipment.shipmentId
+  );
 
-            const manifest =
-                await generateManifest(
-                    order.shipment.shipmentId
-                );
+  order.shipment.awb =
+    details.awb || order.shipment.awb;
 
-            order.shipment.manifestUrl =
-                manifest.manifest_url;
+  order.shipment.courier =
+    details.courier || order.shipment.courier;
 
-        } catch (err) {
+  order.shipment.status =
+    details.status || order.shipment.status;
 
-            console.log(err.response?.data);
+  order.shipment.trackingUrl =
+    details.trackingUrl || order.shipment.trackingUrl;
 
-        }
+  order.shipment.estimatedDeliveryDate =
+    details.estimatedDeliveryDate
+      ? new Date(details.estimatedDeliveryDate)
+      : order.shipment.estimatedDeliveryDate;
+
+  order.shipment.lastTrackingUpdate =
+    new Date();
+
+  // ----------------------------
+  // Generate Label
+  // ----------------------------
+
+  if (
+    order.shipment.awb &&
+    !order.shipment.labelUrl
+  ) {
+
+    try {
+
+      const label =
+        await generateLabel(
+          order.shipment.shipmentId
+        );
+
+      order.shipment.labelUrl =
+        label.label_url;
+
+    } catch (err) {
+
+      console.log(err.response?.data);
 
     }
 
-    // ----------------------------
-    // Schedule Pickup
-    // ----------------------------
+  }
 
-    if (
-        order.shipment.awb &&
-        !order.shipment.pickupToken
-    ) {
+  // ----------------------------
+  // Generate Manifest
+  // ----------------------------
 
-        try {
+  if (
+    order.shipment.awb &&
+    !order.shipment.manifestUrl
+  ) {
 
-            const pickup =
-                await schedulePickup(
-                    order.shipment.shipmentId
-                );
+    try {
 
-            order.shipment.pickupToken =
-                pickup.pickup_token;
+      const manifest =
+        await generateManifest(
+          order.shipment.shipmentId
+        );
 
-        } catch (err) {
+      order.shipment.manifestUrl =
+        manifest.manifest_url;
 
-            console.log(err.response?.data);
+    } catch (err) {
 
-        }
+      console.log(err.response?.data);
 
     }
 
-    await order.save();
+  }
 
-    res.status(200).json({
-        success: true,
-        shipment: order.shipment
-    });
+  // ----------------------------
+  // Schedule Pickup
+  // ----------------------------
+
+  if (
+    order.shipment.awb &&
+    !order.shipment.pickupToken
+  ) {
+
+    try {
+
+      const pickup =
+        await schedulePickup(
+          order.shipment.shipmentId
+        );
+
+      order.shipment.pickupToken =
+        pickup.pickup_token;
+
+    } catch (err) {
+
+      console.log(err.response?.data);
+
+    }
+
+  }
+
+  await order.save();
+
+  res.status(200).json({
+    success: true,
+    shipment: order.shipment
+  });
 
 });
 
@@ -637,5 +646,5 @@ const rtoNDR = catchAsync(async (req, res, next) => {
 });
 
 module.exports = {
-  trackMyOrder, checkDelivery, shipmentDetails, cancelOrderShipment, pickupShipment, getManifest, getLabel, trackOrder ,syncShipment,reattemptNDR,getAllNDR,getOrderNDR,rtoNDR
+  trackMyOrder, checkPincode, shipmentDetails, cancelOrderShipment, pickupShipment, getManifest, getLabel, trackOrder, syncShipment, reattemptNDR, getAllNDR, getOrderNDR, rtoNDR
 };
