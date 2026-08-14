@@ -129,22 +129,22 @@ const orderSchema = new mongoose.Schema({
   },
 
   shipmentStatus: {
-  type: String,
-  enum: [
-    'not_created',
-    'shipment_created',
-    'courier_assigned',
-    'pickup_scheduled',
-    'in_transit',
-    'out_for_delivery',
-    'ndr',
-    'reattempt_scheduled',
-    'delivered',
-    'rto',
-    'cancelled'
-  ],
-  default: 'not_created'
-},
+    type: String,
+    enum: [
+      'not_created',
+      'shipment_created',
+      'courier_assigned',
+      'pickup_scheduled',
+      'in_transit',
+      'out_for_delivery',
+      'ndr',
+      'reattempt_scheduled',
+      'delivered',
+      'rto',
+      'cancelled'
+    ],
+    default: 'not_created'
+  },
   statusHistory: [{
     status: String,
     timestamp: { type: Date, default: Date.now },
@@ -252,8 +252,40 @@ const orderSchema = new mongoose.Schema({
 
         }
       ]
+    },
+    rto: {
+
+      isRto: {
+        type: Boolean,
+        default: false
+      },
+
+      initiatedAt: {
+        type: Date,
+        default: null
+      },
+
+      deliveredAt: {
+        type: Date,
+        default: null
+      },
+
+      reason: {
+        type: String,
+        default: null
+      },
+
+      returnAwb: {
+        type: String,
+        default: null
+      }
     }
+
+
+
   },
+
+
   cancelReason: String,
   cancelledAt: Date,
 

@@ -443,7 +443,7 @@ const getShipmentDetails = async (shipmentId) => {
 
 //NDR 
 
-const getNDRShipments = async ({
+const   getNDRShipments = async ({
   page = 1,
   perPage = 20,
   search = '',
@@ -486,7 +486,7 @@ const getNDRShipments = async ({
 
     throw err;
   }
-};
+};  
 const getNDRDetails = async (awb) => {
 
   const authToken = await getToken();

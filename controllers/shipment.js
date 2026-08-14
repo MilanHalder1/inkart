@@ -11,24 +11,18 @@ const catchAsync = require('../utilities/CatchAsync');
 const AppError = require('../utilities/AppError');
 
 
-// ✅ TRACK ORDER
+
 const trackMyOrder = catchAsync(async (req, res, next) => {
 
   const order = await Order.findById(req.params.id);
 
-
   if (!order) {
-    return next(
-      new AppError('Order not found', 404)
-    );
+    return next(new AppError('Order not found', 404));
   }
 
   if (!order.shipment?.awb) {
     return next(
-      new AppError(
-        'Shipment tracking not available yet',
-        400
-      )
+      new AppError('AWB not available for this order', 400)
     );
   }
 
@@ -36,15 +30,188 @@ const trackMyOrder = catchAsync(async (req, res, next) => {
     order.shipment.awb
   );
 
+  const trackingData = tracking?.tracking_data;
+
+  if (!trackingData) {
+    return next(
+      new AppError('Tracking data not available', 404)
+    );
+  }
+
+  const track = trackingData.shipment_track?.[0];
+
+  const ndr = trackingData.ndr || {};
+
+  // =====================================
+  // BASIC SHIPMENT DATA
+  // =====================================
+
+  order.shipment.currentStatusCode =
+    Number(trackingData.shipment_status) || null;
+
+  order.shipment.status =
+    track?.current_status ||
+    order.shipment.status;
+
+  order.shipment.courier =
+    track?.courier_name ||
+    order.shipment.courier;
+
+  order.shipment.trackingUrl =
+    trackingData.track_url ||
+    order.shipment.trackingUrl;
+
+  order.shipment.estimatedDeliveryDate =
+    trackingData.etd
+      ? new Date(trackingData.etd)
+      : order.shipment.estimatedDeliveryDate;
+
+  order.shipment.lastTrackingUpdate =
+    new Date();
+
+
+  // =====================================
+  // NDR DETECTION
+  // =====================================
+
+  const ndrExists =
+    Number(ndr.attempts) > 0 ||
+    Boolean(ndr.reason) ||
+    Boolean(ndr.undelivered_reason_code);
+
+
+  if (ndrExists) {
+
+    order.shipment.ndr.isNdr = true;
+
+    order.shipment.ndr.reason =
+      ndr.reason || null;
+
+    order.shipment.ndr.attemptCount =
+      Number(ndr.attempts) || 0;
+
+    order.shipment.ndr.lastAttemptAt =
+      new Date();
+
+    order.shipment.ndr.resolved = false;
+
+    order.shipment.ndr.history.push({
+      reason: ndr.reason || '',
+      remark: ndr.undelivered_reason_code || '',
+      action: 'none',
+      attemptAt: new Date(),
+      statusCode:
+        Number(trackingData.shipment_status) || null
+    });
+
+  }
+
+
+  // =====================================
+  // RTO DETECTION
+  // =====================================
+
+  const statusCode =
+    Number(trackingData.shipment_status);
+
+  const currentStatus =
+    String(
+      track?.current_status || ''
+    ).toUpperCase();
+
+
+  const rtoDetected =
+    statusCode === 9 ||
+    statusCode === 46 ||
+    currentStatus.includes('RTO');
+
+
+  if (rtoDetected) {
+
+    order.shipment.rto.isRto = true;
+
+    if (!order.shipment.rto.initiatedAt) {
+
+      order.shipment.rto.initiatedAt =
+        new Date();
+
+    }
+
+    order.shipment.rto.reason =
+      trackingData.shipment_track_activities
+        ?.find(activity =>
+          String(activity.status).toLowerCase() === 'rts'
+        )
+        ?.activity || null;
+
+  }
+
+
+  // =====================================
+  // ORDER STATUS
+  // =====================================
+
+  if (
+    currentStatus.includes('DELIVERED') &&
+    !currentStatus.includes('RTO')
+  ) {
+
+    order.orderStatus = 'delivered';
+
+    order.shipmentStatus = 'delivered';
+
+    order.deliveredAt =
+      new Date();
+
+  }
+
+  else if (rtoDetected) {
+
+    order.shipmentStatus =
+      'cancelled';
+
+  }
+
+  else if (
+    currentStatus.includes('OUT FOR DELIVERY')
+  ) {
+
+    order.shipmentStatus =
+      'out_for_delivery';
+
+  }
+
+  else if (
+    currentStatus.includes('IN TRANSIT')
+  ) {
+
+    order.shipmentStatus =
+      'in_transit';
+
+  }
+
+
+  await order.save();
+
+
   res.status(200).json({
+
     success: true,
 
     data: {
+
+      orderId: order._id,
+
+      orderNumber: order.orderNumber,
+
       shipment: order.shipment,
 
-      tracking,
-    },
+      tracking: trackingData
+
+    }
+
   });
+
 });
 const checkPincode = catchAsync(async (req, res, next) => {
 
