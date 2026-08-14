@@ -495,6 +495,8 @@ const getOrderNDR = catchAsync(async (req, res, next) => {
       new AppError('Shipment AWB not available', 400)
     );
   }
+    console.log("Order NDR",order.shipment.awb)
+
 
   const data = await getNDRDetails(
     order.shipment.awb
