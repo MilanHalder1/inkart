@@ -7,7 +7,7 @@ const morgan = require('morgan');
 const compression = require('compression');
 const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
-const rateLimit = require('express-rate-limit');
+const{rateLimit,ipKeyGenerator} = require('express-rate-limit');
 require('dotenv').config();
 
 const connectDB = require('./config/db');
@@ -33,6 +33,7 @@ const userReview=require('./routes/review');
 const adminAnalyticsRoutes = require('./routes/admin.analytics');
 const shipmentRoutes = require('./routes/shipment');
 const app = express();
+app.set('trust proxy', 1);
 
 connectDB();
 
@@ -52,6 +53,7 @@ app.use(cors({
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 min
   max: 300,
+  keyGenerator:(req)=>ipKeyGenerator(req.ip),
   message: { success: false, message: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,

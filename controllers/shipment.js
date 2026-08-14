@@ -484,7 +484,7 @@ const getOrderNDR = catchAsync(async (req, res, next) => {
 
   const order = await Order.findById(req.params.orderId);
 
-  if (!order) {
+  if (!order) {   
     return next(
       new AppError('Order not found', 404)
     );
