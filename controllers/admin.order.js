@@ -357,7 +357,7 @@ const getCustomizedOrders = catchAsync(async (req, res) => {
 });
 
 const setDeliveryEstimate = catchAsync(async (req, res, next) => {
-  const { estimatedDeliveryDate, deliveryNote, approvedByAdmin } = req.body;
+  const { estimatedDeliveryDate, deliveryNote } = req.body;
 
   const order = await Order.findById(req.params.id);
 
@@ -367,7 +367,7 @@ const setDeliveryEstimate = catchAsync(async (req, res, next) => {
 
   order.estimatedDeliveryDate = estimatedDeliveryDate;
   order.deliveryNote = deliveryNote;
-  order.approvedByAdmin = approvedByAdmin
+  order.approvedByAdmin = true;
   await order.save();
 
   res.status(200).json({
