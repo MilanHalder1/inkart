@@ -174,85 +174,85 @@ const getOrder = catchAsync(async (req, res, next) => {
   if (!order)
     return next(new AppError("Order not found.", 404));
 
- const formattedOrder = order.toObject();
+  const formattedOrder = order.toObject();
 
-formattedOrder.items = formattedOrder.items.map((item) => {
+  formattedOrder.items = formattedOrder.items.map((item) => {
 
-  const customization = item.customizationId;
+    const customization = item.customizationId;
 
-  const frontDesign = customization?.designs?.find(
-    (design) => design.side === "front"
-  );
+    const frontDesign = customization?.designs?.find(
+      (design) => design.side === "front"
+    );
 
-  const backDesign = customization?.designs?.find(
-    (design) => design.side === "back"
-  );
+    const backDesign = customization?.designs?.find(
+      (design) => design.side === "back"
+    );
 
-  return {
-    ...item,
+    return {
+      ...item,
 
-    color: item.selectedColor || null,
+      color: item.selectedColor || null,
 
-    quantity: item.quantity,
+      quantity: item.quantity,
 
-    sizeBreakdown:
-      item.selectedSizes?.length
-        ? item.selectedSizes
-        : [],
+      sizeBreakdown:
+        item.selectedSizes?.length
+          ? item.selectedSizes
+          : [],
 
-    totalSizes:
-      item.selectedSizes?.reduce(
-        (sum, s) => sum + s.quantity,
-        0
-      ) || item.quantity,
+      totalSizes:
+        item.selectedSizes?.reduce(
+          (sum, s) => sum + s.quantity,
+          0
+        ) || item.quantity,
 
-    customization: customization
-      ? {
+      customization: customization
+        ? {
           _id: customization._id,
 
           status: customization.status,
 
           front: frontDesign
             ? {
-                previewImage:
-                  frontDesign.previewImage?.url || null,
+              previewImage:
+                frontDesign.previewImage?.url || null,
 
-                backgroundImage:
-                  frontDesign.backgroundImage?.url || null,
+              backgroundImage:
+                frontDesign.backgroundImage?.url || null,
 
-                layers:
-                  frontDesign.layers || [],
+              layers:
+                frontDesign.layers || [],
 
-                canvasWidth:
-                  frontDesign.canvasWidth || null,
+              canvasWidth:
+                frontDesign.canvasWidth || null,
 
-                canvasHeight:
-                  frontDesign.canvasHeight || null,
-              }
+              canvasHeight:
+                frontDesign.canvasHeight || null,
+            }
             : null,
 
           back: backDesign
             ? {
-                previewImage:
-                  backDesign.previewImage?.url || null,
+              previewImage:
+                backDesign.previewImage?.url || null,
 
-                backgroundImage:
-                  backDesign.backgroundImage?.url || null,
+              backgroundImage:
+                backDesign.backgroundImage?.url || null,
 
-                layers:
-                  backDesign.layers || [],
+              layers:
+                backDesign.layers || [],
 
-                canvasWidth:
-                  backDesign.canvasWidth || null,
+              canvasWidth:
+                backDesign.canvasWidth || null,
 
-                canvasHeight:
-                  backDesign.canvasHeight || null,
-              }
+              canvasHeight:
+                backDesign.canvasHeight || null,
+            }
             : null,
         }
-      : null,
-  };
-});
+        : null,
+    };
+  });
 
   res.status(200).json({
     success: true,
@@ -357,7 +357,7 @@ const getCustomizedOrders = catchAsync(async (req, res) => {
 });
 
 const setDeliveryEstimate = catchAsync(async (req, res, next) => {
-  const { estimatedDeliveryDate, deliveryNote } = req.body;
+  const { estimatedDeliveryDate, deliveryNote, approvedByAdmin } = req.body;
 
   const order = await Order.findById(req.params.id);
 
@@ -367,7 +367,7 @@ const setDeliveryEstimate = catchAsync(async (req, res, next) => {
 
   order.estimatedDeliveryDate = estimatedDeliveryDate;
   order.deliveryNote = deliveryNote;
-
+  order.approvedByAdmin = approvedByAdmin
   await order.save();
 
   res.status(200).json({
