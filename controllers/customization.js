@@ -180,4 +180,39 @@ const deleteDesign = catchAsync(async (req, res, next) => {
   res.status(200).json({ success: true, message: 'Design deleted.' });
 });
 
-module.exports = { uploadBackgroundImage, saveDesign,uploadArtwork, uploadPreviewImage, getDesign, getUserDesigns, deleteDesign };
+
+const getProductCustomization = catchAsync(
+  async (req, res, next) => {
+    const { productId } = req.params;
+
+    const customization = await Customization.findOne({
+      user: req.user.id,
+      product: productId,
+      status: { $ne: "ordered" },
+    })
+      .populate(
+        "product",
+        "name images printableAreas"
+      );
+
+    // No previous customization
+    if (!customization) {
+      return res.status(200).json({
+        success: true,
+        exists: false,
+        data: {
+          customization: null,
+        },
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      exists: true,
+      data: {
+        customization,
+      },
+    });
+  }
+);
+module.exports = { uploadBackgroundImage, saveDesign,uploadArtwork, uploadPreviewImage, getDesign,getProductCustomization, getUserDesigns, deleteDesign };

@@ -7,6 +7,7 @@ const {
   saveDesign,
   uploadPreviewImage,
   getDesign,
+  getProductCustomization,
   getUserDesigns,
   deleteDesign,
   uploadArtwork
@@ -16,6 +17,10 @@ router.use(protect);
 
 router.get('/', getUserDesigns);
 router.post('/', saveDesign);
+router.get(
+  '/products/:productId',
+  getProductCustomization
+);
 router.get('/:customizationId', getDesign);
 router.delete('/:customizationId', deleteDesign);
 router.post('/products/:productId/background', uploadBackgroundImage);
