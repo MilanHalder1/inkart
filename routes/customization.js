@@ -12,7 +12,7 @@ const {
   uploadArtwork
 } = require('../controllers/customization');
 
-// router.use(protect);
+router.use(protect);
 
 router.get('/', getUserDesigns);
 router.post('/', saveDesign);
