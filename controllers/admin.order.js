@@ -222,6 +222,8 @@ const getOrder = catchAsync(async (req, res, next) => {
 
               backgroundImage:
                 frontDesign.backgroundImage?.url || null,
+              uploadedFiles:
+                frontDesign.uploadedFiles || [],
 
               layers:
                 frontDesign.layers || [],
@@ -241,7 +243,8 @@ const getOrder = catchAsync(async (req, res, next) => {
 
               backgroundImage:
                 backDesign.backgroundImage?.url || null,
-
+              uploadedFiles:
+                frontDesign.uploadedFiles || [],
               layers:
                 backDesign.layers || [],
 
