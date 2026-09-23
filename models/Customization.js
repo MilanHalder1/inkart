@@ -38,7 +38,23 @@ const designSideSchema = new mongoose.Schema(
       url: String,
       publicId: String,
     },
+    uploadedFiles: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
 
+        publicId: {
+          type: String,
+          required: true,
+        },
+
+        fileName: String,
+
+        fileType: String,
+      }
+    ],
     layers: [layerSchema],
 
     previewImage: {

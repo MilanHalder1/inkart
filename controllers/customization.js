@@ -29,6 +29,43 @@ const uploadBackgroundImage = [
   }),
 ];
 
+// Upload user's original logo / artwork / image
+const uploadArtwork = [
+  createUploader('customizations/artworks').single('artwork'),
+
+  catchAsync(async (req, res, next) => {
+    const { productId } = req.params;
+
+    if (!req.file) {
+      return next(
+        new AppError('No artwork uploaded.', 400)
+      );
+    }
+
+    // Verify product
+    const product = await Product.findById(productId);
+
+    if (!product || !product.isCustomizable) {
+      return next(
+        new AppError(
+          'Product not found or not customizable.',
+          404
+        )
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        url: req.file.path,
+        publicId: req.file.filename,
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype,
+      },
+    });
+  }),
+];
+
 const saveDesign = catchAsync(async (req, res, next) => {
   const {
     productId,
@@ -143,4 +180,4 @@ const deleteDesign = catchAsync(async (req, res, next) => {
   res.status(200).json({ success: true, message: 'Design deleted.' });
 });
 
-module.exports = { uploadBackgroundImage, saveDesign, uploadPreviewImage, getDesign, getUserDesigns, deleteDesign };
+module.exports = { uploadBackgroundImage, saveDesign,uploadArtwork, uploadPreviewImage, getDesign, getUserDesigns, deleteDesign };

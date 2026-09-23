@@ -105,7 +105,8 @@ const getAllOrders = catchAsync(async (req, res) => {
 
                 backgroundImage:
                   frontDesign.backgroundImage?.url || null,
-
+                uploadedFiles:
+                  frontDesign.uploadedFiles || [],
                 layers:
                   frontDesign.layers || [],
 
@@ -124,6 +125,8 @@ const getAllOrders = catchAsync(async (req, res) => {
 
                 backgroundImage:
                   backDesign.backgroundImage?.url || null,
+                uploadedFiles:
+                  backDesign.uploadedFiles || [],
 
                 layers:
                   backDesign.layers || [],

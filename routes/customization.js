@@ -12,7 +12,7 @@ const {
   uploadArtwork
 } = require('../controllers/customization');
 
-router.use(protect);
+// router.use(protect);
 
 router.get('/', getUserDesigns);
 router.post('/', saveDesign);
@@ -21,10 +21,9 @@ router.delete('/:customizationId', deleteDesign);
 router.post('/products/:productId/background', uploadBackgroundImage);
 router.patch('/:customizationId/preview', uploadPreviewImage);
 
-// router.post(
-//   '/upload-artwork',
-//   protect,
-//   upload.any(),
-//   uploadArtwork
-// );
+router.post(
+  '/products/:productId/artwork',
+
+  uploadArtwork
+);
 module.exports = router;  
